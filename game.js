@@ -956,10 +956,11 @@ const buf = mk(320, 180), bctx = buf.getContext('2d');
 let LW = 320, LH = 180, SC = 4, CW = 1, CHh = 1, OX = 0, OY = 0;
 function titleOff() { return LW > LH * 1.6 && LH < 230 ? .33 : .22; }
 function resize() {
-  const DPR = Math.min(window.devicePixelRatio || 1, 3);
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
   CW = Math.max(1, Math.round(innerWidth * DPR)); CHh = Math.max(1, Math.round(innerHeight * DPR));
   canvas.width = CW; canvas.height = CHh;
-  SC = Math.max(2, Math.floor(Math.min(CW, CHh) / 168));
+  const big = Math.min(innerWidth, innerHeight) > 620 && !(matchMedia('(pointer: coarse)').matches);
+  SC = Math.max(2, Math.floor(Math.min(CW, CHh) / (big ? 205 : 168)));
   LW = Math.ceil(CW / SC); LH = Math.ceil(CHh / SC);
   OX = Math.floor((CW - LW * SC) / 2); OY = Math.floor((CHh - LH * SC) / 2);
   buf.width = LW; buf.height = LH;
@@ -1301,7 +1302,9 @@ function collide(px, py, rad) {
 
 /* ============================== horse update ============================== */
 function setState(s) { H.state = s; H.stT = 0; }
+function screenToWorld(clx, cly) { const r = canvas.getBoundingClientRect(), dpr = CW / r.width; return [cam.x + ((clx - r.left) * dpr - OX) / SC, cam.y + ((cly - r.top) * dpr - OY) / SC]; }
 function updHorse(dt) {
+  if (ptr && ptr.mouse && mode === 'play' && !(cine && cine.lock)) { if (!ptr.steer && performance.now() - ptr.t > 220) ptr.steer = true; if (ptr.steer) { const [wx, wy] = screenToWorld(ptr.cx, ptr.cy); H.target = dist(wx, wy, H.x, H.y) > 10 ? { x: wx, y: wy } : null; } }
   let ix = input.x, iy = input.y;
   if (!ix && !iy) { const kx = (input.keys.has('ArrowRight') || input.keys.has('KeyD') ? 1 : 0) - (input.keys.has('ArrowLeft') || input.keys.has('KeyA') ? 1 : 0); const ky = (input.keys.has('ArrowDown') || input.keys.has('KeyS') ? 1 : 0) - (input.keys.has('ArrowUp') || input.keys.has('KeyW') ? 1 : 0); ix = kx; iy = ky; }
   let mag = Math.hypot(ix, iy);
@@ -1463,7 +1466,7 @@ function openName() {
 }
 function confirmName() {
   let nm = $('nameIn').value.trim().replace(/\s+/g, ' ').slice(0, 16); if (!nm) nm = 'Dune';
-  S.name = nm; S.river = true; $('nameDlg').classList.add('hide');
+  S.name = nm; S.river = true; $('nameDlg').classList.add('hide'); if (mapBuilt) buildMap();
   cine.lock = false; save(); updateHUD();
   card('You remember', nm + '.', 'The river is running again. Go anywhere you like.', 8);
   setTimeout(() => { whinny(); }, 400); setTimeout(() => { cine = null; }, 6000);
@@ -1983,64 +1986,131 @@ function checkRegion(dt) {
     if (T - lastBanner > 5) { $('rgN').textContent = r.name; $('rgB').textContent = (first ? 'New place · ' : '') + BIOME_NAME[r.b]; $('region').classList.add('show'); bannerT = 3.6; lastBanner = T; if (first) sfx.discover(); }
   }
 }
-function markSeen() {
-  const x0 = Math.floor((cam.x - 24) / MC), x1 = Math.floor((cam.x + LW + 24) / MC), y0 = Math.floor((cam.y - 24) / MC), y1 = Math.floor((cam.y + LH + 24) / MC);
-  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) seen.add(x + ',' + y);
-  const lt = trail[trail.length - 1]; if (!lt || dist(lt[0], lt[1], H.x, H.y) > 28) { trail.push([Math.round(H.x), Math.round(H.y)]); if (trail.length > 4000) trail.splice(0, 500); }
-}
 function ambient(dt) {
   ambT -= dt; if (ambT > 0) return; ambT = rand(.6, 1.6);
   if (nightAmt() > .5 && [1, 2, 5, 6].includes(H.biome) && R() < .7) sfx.cricket();
   for (const L of lmsNear(H.x, H.y, 160)) if (L.type === 'windmill' && dist(L.x, L.y, H.x, H.y) < 140 && R() < .35) sfx.creak();
 }
 const MAPPAL = ['#f0c58e', '#dcbf86', '#c3c27e', '#f4ead6', '#d98e62', '#c7bd8e', '#eaa66c', '#fbf9f4', '#5c5054'];
-let mapZ = 4, mapPan = { x: 0, y: 0 }, mapDrag = null;
-function openMap() { audioInit(); markSeen(); mapPan.x = mapPan.y = 0; $('mapDlg').classList.remove('hide'); sfx.paper(); requestAnimationFrame(drawMap); }
-function closeMap() { $('mapDlg').classList.add('hide'); }
+// The map is painted once, one pixel per explored cell, into tiles. Drawing it is then just scaling those tiles.
+const MT = 64, mapTiles = new Map(), regAcc = new Map();
+let mapBuilt = false;
+function mapCellColor(wx, wy) {
+  if (Math.abs(wy - RAILY) < MC / 2) return '#6e5c54';
+  for (const o of oasesNear(wx, wy, 120)) if (inEll(wx, wy, o, 18)) return '#4f9ed2';
+  for (const m of mesasNear(wx, wy, 140)) if (inEll(wx, wy, m, 8)) return '#b8603e';
+  if (inRiverBed(wx, wy, 4)) return S.river ? '#4f9ed2' : '#c8a07a';
+  return MAPPAL[biomeAt(wx, wy)];
+}
+function paintCell(cx, cy) {
+  const tx = Math.floor(cx / MT), ty = Math.floor(cy / MT), k = tx + ',' + ty;
+  let t = mapTiles.get(k); if (!t) { const c = mk(MT, MT); t = { c, g: c.getContext('2d'), tx, ty }; mapTiles.set(k, t); }
+  const wx = cx * MC + MC / 2, wy = cy * MC + MC / 2;
+  t.g.fillStyle = mapCellColor(wx, wy); t.g.fillRect(cx - tx * MT, cy - ty * MT, 1, 1);
+  const rg = regionAt(wx, wy); let a = regAcc.get(rg.key); if (!a) regAcc.set(rg.key, a = { n: 0, x: 0, y: 0, r: rg }); a.n++; a.x += wx; a.y += wy;
+}
+function buildMap() { mapTiles.clear(); regAcc.clear(); for (const k of seen) { const i = k.indexOf(','); paintCell(+k.slice(0, i), +k.slice(i + 1)); } mapBuilt = true; }
+function markSeen() {
+  const x0 = Math.floor((cam.x - 24) / MC), x1 = Math.floor((cam.x + LW + 24) / MC), y0 = Math.floor((cam.y - 24) / MC), y1 = Math.floor((cam.y + LH + 24) / MC);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const k = x + ',' + y; if (!seen.has(k)) { seen.add(k); if (mapBuilt) paintCell(x, y); } }
+  const lt = trail[trail.length - 1]; if (!lt || dist(lt[0], lt[1], H.x, H.y) > 28) { trail.push([Math.round(H.x), Math.round(H.y)]); if (trail.length > 4000) trail.splice(0, 500); }
+}
+// view: world point at the canvas center, and canvas pixels per world pixel
+const MV = { x: 0, y: 0, s: .1, dirty: false, raf: 0 };
+const MAP_MIN = .012, MAP_MAX = .45;
+const mapDPR = () => Math.min(window.devicePixelRatio || 1, 2);
+function openMap() {
+  audioInit(); markSeen(); if (!mapBuilt) buildMap();
+  $('mapDlg').classList.remove('hide'); sfx.paper();
+  MV.x = H.x; MV.y = H.y; MV.s = .11 * mapDPR();
+  requestAnimationFrame(() => { sizeMap(); drawMap(); });
+}
+function closeMap() { $('mapDlg').classList.add('hide'); mapPtrs.clear(); }
+function sizeMap() { const cv = $('mapC'), r = cv.getBoundingClientRect(), d = mapDPR(); const w = Math.round(r.width * d), h = Math.round(r.height * d); if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; } }
+function mapDirty() { if (MV.raf) return; MV.raf = requestAnimationFrame(() => { MV.raf = 0; drawMap(); }); }
+function zoomMapAt(factor, px, py) {
+  // px, py in canvas pixels; keep the world point under them fixed
+  const cv = $('mapC'), wx = MV.x + (px - cv.width / 2) / MV.s, wy = MV.y + (py - cv.height / 2) / MV.s;
+  const d = mapDPR(); MV.s = clamp(MV.s * factor, MAP_MIN * d, MAP_MAX * d);
+  MV.x = wx - (px - cv.width / 2) / MV.s; MV.y = wy - (py - cv.height / 2) / MV.s; mapDirty();
+}
 function drawMap() {
-  const cv = $('mapC'), r = cv.getBoundingClientRect(); if (!r.width || !r.height) return;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2); cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
-  const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
-  const W2 = cv.width, H2 = cv.height, cell = Math.max(2, Math.round(mapZ * dpr)), ppw = cell / MC;
-  const wx0 = H.x + mapPan.x - W2 / 2 / ppw, wy0 = H.y + mapPan.y - H2 / 2 / ppw;
-  const X = wx => (wx - wx0) * ppw, Y = wy => (wy - wy0) * ppw;
+  const cv = $('mapC'); if ($('mapDlg').classList.contains('hide')) return; sizeMap();
+  const g = cv.getContext('2d'), W2 = cv.width, H2 = cv.height, d = mapDPR(), s = MV.s; if (!W2 || !H2) return;
+  g.imageSmoothingEnabled = false;
+  const wx0 = MV.x - W2 / 2 / s, wy0 = MV.y - H2 / 2 / s, wx1 = wx0 + W2 / s, wy1 = wy0 + H2 / s;
+  const X = wx => (wx - wx0) * s, Y = wy => (wy - wy0) * s;
   g.fillStyle = '#ead9b8'; g.fillRect(0, 0, W2, H2);
-  g.fillStyle = 'rgba(140,100,60,.08)'; for (let y = 0; y < H2; y += Math.round(6 * dpr)) g.fillRect(0, y, W2, 1);
-  const c0 = Math.floor(wx0 / MC), c1 = Math.ceil((wx0 + W2 / ppw) / MC), r0 = Math.floor(wy0 / MC), r1 = Math.ceil((wy0 + H2 / ppw) / MC);
-  const labels = new Map();
-  for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) {
-    const k = cx + ',' + cy; if (!seen.has(k)) continue;
-    const wx = cx * MC + MC / 2, wy = cy * MC + MC / 2;
-    let col = mapColCache.get(k); if (!col) { col = MAPPAL[biomeAt(wx, wy)]; mapColCache.set(k, col); }
-    g.fillStyle = col; g.fillRect(Math.floor(X(cx * MC)), Math.floor(Y(cy * MC)), cell + 1, cell + 1);
-    const rg = regionAt(wx, wy); let L = labels.get(rg.key); if (!L) labels.set(rg.key, L = { n: 0, x: 0, y: 0, r: rg }); L.n++; L.x += wx; L.y += wy;
-  }
+  g.fillStyle = 'rgba(140,100,60,.08)'; for (let y = 0; y < H2; y += Math.round(6 * d)) g.fillRect(0, y, W2, 1);
+  // explored land
+  const tw = MT * MC, tx0 = Math.floor(wx0 / tw), tx1 = Math.floor(wx1 / tw), ty0 = Math.floor(wy0 / tw), ty1 = Math.floor(wy1 / tw);
+  for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) { const t = mapTiles.get(tx + ',' + ty); if (!t) continue; const sx = Math.floor(X(tx * tw)), sy = Math.floor(Y(ty * tw)), ex = Math.floor(X((tx + 1) * tw)), ey = Math.floor(Y((ty + 1) * tw)); g.drawImage(t.c, sx, sy, ex - sx, ey - sy); }
   const seenAt = (x, y) => seen.has(Math.floor(x / MC) + ',' + Math.floor(y / MC));
-  const ell = (x, y, rx, ry) => { g.beginPath(); g.ellipse(x, y, Math.max(1, rx), Math.max(1, ry), 0, 0, TAU); g.fill(); };
-  for (let wx = Math.floor(wx0 / 6) * 6; wx < wx0 + W2 / ppw; wx += 6) { const ry = riverY(wx); if (!seenAt(wx, ry)) continue; g.fillStyle = S.river ? '#4f9ed2' : '#c8a07a'; const w = Math.max(1.5, riverHW(wx) * 2 * ppw); g.fillRect(X(wx), Y(ry) - w / 2, 6 * ppw + 1, w); }
-  for (let wx = Math.floor(wx0 / 8) * 8; wx < wx0 + W2 / ppw; wx += 8) { if (!seenAt(wx, RAILY)) continue; g.fillStyle = '#5a4a44'; g.fillRect(X(wx), Y(RAILY) - dpr, 8 * ppw + 1, 2 * dpr); if ((wx / 8) % 2 === 0) g.fillRect(X(wx), Y(RAILY) - 3 * dpr, dpr, 6 * dpr); }
-  const vw = W2 / ppw, vh = H2 / ppw, mx = wx0 + vw / 2, my = wy0 + vh / 2, rad = Math.max(vw, vh) * .75;
-  for (const m of mesasNear(mx, my, rad)) if (seenAt(m.x, m.y)) { g.fillStyle = '#b8603e'; ell(X(m.x), Y(m.y), m.rx * ppw, m.ry * ppw * 1.6); }
-  for (const o of oasesNear(mx, my, rad)) if (seenAt(o.x, o.y)) { g.fillStyle = '#4f9ed2'; ell(X(o.x), Y(o.y), Math.max(2 * dpr, o.rx * ppw), Math.max(1.5 * dpr, o.ry * ppw)); }
-  g.fillStyle = 'rgba(122,70,40,.6)'; for (const [tx, ty] of trail) { const sx = X(tx), sy = Y(ty); if (sx < 0 || sy < 0 || sx > W2 || sy > H2) continue; g.fillRect(sx, sy, Math.max(1, dpr), Math.max(1, dpr)); }
-  const icon = (spr, wx, wy, sz) => { if (!spr) return; const s = Math.max(.5, Math.round(sz * dpr / Math.max(spr.width, spr.height) * 2) / 2), w = spr.width * s, h = spr.height * s; g.drawImage(spr, Math.round(X(wx) - w / 2), Math.round(Y(wy) - h * .8), w, h); };
-  for (const L of lmsNear(mx, my, rad)) if (seenAt(L.x, L.y)) icon(lmIcon(L.type), L.x, L.y, 24);
-  for (const cp of campsNear(mx, my, rad)) if (seenAt(cp.x, cp.y)) icon(SPR.bottle, cp.x, cp.y, 16);
-  for (const ri of RINGS) if (seenAt(ri.x, ri.y)) icon(ri.found ? SPR.centerDim : SPR.center, ri.x, ri.y, 16);
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  const fs = Math.round(12 * dpr); g.font = '600 ' + fs + 'px "Pixelify Sans", monospace'; g.lineJoin = 'round';
-  const placed = [], here = regionAt(H.x, H.y).key;
-  for (const L of [...labels.values()].sort((a, c) => (c.r.key === here) - (a.r.key === here) || c.n - a.n)) {
-    if (L.n < 4 && L.r.key !== here) continue;
-    const x = X(L.x / L.n), y = Y(L.y / L.n), w = g.measureText(L.r.name).width + 10 * dpr, h = fs + 6 * dpr;
-    const box = [x - w / 2, y - h / 2, x + w / 2, y + h / 2];
-    if (placed.some(p => p[0] < box[2] && p[2] > box[0] && p[1] < box[3] && p[3] > box[1])) continue;
-    placed.push(box); g.lineWidth = 4 * dpr; g.strokeStyle = 'rgba(250,240,220,.9)'; g.strokeText(L.r.name, x, y); g.fillStyle = '#5a3424'; g.fillText(L.r.name, x, y);
+  // hoofprint trail
+  const ds = Math.max(1, Math.round(1.2 * d)); g.fillStyle = 'rgba(122,70,40,.6)';
+  for (const [tx, ty] of trail) { if (tx < wx0 || tx > wx1 || ty < wy0 || ty > wy1) continue; g.fillRect(Math.round(X(tx)), Math.round(Y(ty)), ds, ds); }
+  // icons (only when zoomed in enough to read them)
+  const iconPx = clamp(s * 140, 10 * d, 30 * d), cxw = (wx0 + wx1) / 2, cyw = (wy0 + wy1) / 2, rad = Math.max(wx1 - wx0, wy1 - wy0) * .72;
+  const icon = (spr, wx, wy, sz) => { if (!spr) return; const k = sz / Math.max(spr.width, spr.height), w = Math.max(1, Math.round(spr.width * k)), h = Math.max(1, Math.round(spr.height * k)); g.drawImage(spr, Math.round(X(wx) - w / 2), Math.round(Y(wy) - h * .8), w, h); };
+  if (s > .03 * d) {
+    for (const L of lmsNear(cxw, cyw, rad)) if (seenAt(L.x, L.y)) icon(lmIcon(L.type), L.x, L.y, iconPx);
+    for (const cp of campsNear(cxw, cyw, rad)) if (seenAt(cp.x, cp.y)) icon(SPR.bottle, cp.x, cp.y, iconPx * .7);
   }
-  const hx = X(H.x), hy = Y(H.y), pulse = 1 + .25 * Math.sin(performance.now() / 200);
-  g.fillStyle = '#fff6e6'; g.beginPath(); g.arc(hx, hy, 7 * dpr * pulse, 0, TAU); g.fill(); g.fillStyle = '#e9845a'; g.beginPath(); g.arc(hx, hy, 4.5 * dpr, 0, TAU); g.fill();
+  for (const ri of RINGS) if (seenAt(ri.x, ri.y)) icon(ri.found ? SPR.centerDim : SPR.center, ri.x, ri.y, Math.max(10 * d, iconPx * .7));
+  // place names, biggest first, never overlapping
+  const fs = Math.round(clamp(11 * d + s * 8, 10 * d, 15 * d)); g.font = '600 ' + fs + 'px "Pixelify Sans", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+  const here = regionAt(H.x, H.y).key, placed = [], minN = s < .04 * d ? 30 : 4;
+  for (const a of [...regAcc.values()].sort((p, q) => (q.r.key === here) - (p.r.key === here) || q.n - p.n)) {
+    if (a.n < minN && a.r.key !== here) continue;
+    const x = X(a.x / a.n), y = Y(a.y / a.n); if (x < -100 || y < -20 || x > W2 + 100 || y > H2 + 20) continue;
+    const w = g.measureText(a.r.name).width + 10 * d, h = fs + 6 * d, box = [x - w / 2, y - h / 2, x + w / 2, y + h / 2];
+    if (placed.some(p => p[0] < box[2] && p[2] > box[0] && p[1] < box[3] && p[3] > box[1])) continue;
+    placed.push(box); g.lineWidth = 4 * d; g.strokeStyle = 'rgba(250,240,220,.9)'; g.strokeText(a.r.name, x, y); g.fillStyle = '#5a3424'; g.fillText(a.r.name, x, y);
+  }
+  // you are here
+  const hx = X(H.x), hy = Y(H.y);
+  g.fillStyle = '#fff6e6'; g.beginPath(); g.arc(hx, hy, 7 * d, 0, TAU); g.fill(); g.fillStyle = '#e9845a'; g.beginPath(); g.arc(hx, hy, 4.5 * d, 0, TAU); g.fill();
+  if (hx < 0 || hy < 0 || hx > W2 || hy > H2) { const ax = clamp(hx, 14 * d, W2 - 14 * d), ay = clamp(hy, 14 * d, H2 - 14 * d); g.fillStyle = '#e9845a'; g.beginPath(); g.arc(ax, ay, 5 * d, 0, TAU); g.fill(); }
   $('mapTitle').textContent = regionAt(H.x, H.y).name;
   $('mapInfo').textContent = Object.keys(S.regions).length + ' places wandered · ' + ((S.dist || 0) / 1000).toFixed(1) + ' km of hoofprints';
+}
+// touch, mouse, trackpad
+const mapPtrs = new Map(); let mapGesture = null, mapTapT = 0, mapTapP = null;
+function mapLocal(e) { const r = $('mapC').getBoundingClientRect(), d = mapDPR(); return [(e.clientX - r.left) * d, (e.clientY - r.top) * d]; }
+function mapStartGesture() {
+  const pts = [...mapPtrs.values()];
+  if (pts.length >= 2) { const [a, b] = pts; mapGesture = { kind: 'pinch', d0: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, s0: MV.s, mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2, vx: MV.x, vy: MV.y }; }
+  else if (pts.length === 1) mapGesture = { kind: 'pan', x0: pts[0][0], y0: pts[0][1], vx: MV.x, vy: MV.y };
+  else mapGesture = null;
+}
+function initMapInput() {
+  const cv = $('mapC');
+  cv.addEventListener('pointerdown', e => { e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (er) {} mapPtrs.set(e.pointerId, mapLocal(e)); mapStartGesture(); cv.style.cursor = 'grabbing'; });
+  cv.addEventListener('pointermove', e => {
+    if (!mapPtrs.has(e.pointerId)) return; e.preventDefault(); mapPtrs.set(e.pointerId, mapLocal(e));
+    const G = mapGesture; if (!G) return; const pts = [...mapPtrs.values()]; const d = mapDPR();
+    if (G.kind === 'pan' && pts.length === 1) { MV.x = G.vx - (pts[0][0] - G.x0) / MV.s; MV.y = G.vy - (pts[0][1] - G.y0) / MV.s; mapDirty(); }
+    else if (G.kind === 'pinch' && pts.length >= 2) {
+      const [a, b] = pts, dd = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      const s1 = clamp(G.s0 * dd / G.d0, MAP_MIN * d, MAP_MAX * d), W2 = cv.width / 2, H2 = cv.height / 2;
+      const wx = G.vx + (G.mx - W2) / G.s0, wy = G.vy + (G.my - H2) / G.s0;   // the world point that started under the fingers
+      MV.s = s1; MV.x = wx - (mx - W2) / s1; MV.y = wy - (my - H2) / s1; mapDirty();
+    }
+  });
+  const up = e => {
+    if (!mapPtrs.has(e.pointerId)) return; const p = mapPtrs.get(e.pointerId); mapPtrs.delete(e.pointerId);
+    if (!mapPtrs.size && mapGesture && mapGesture.kind === 'pan' && Math.hypot(p[0] - mapGesture.x0, p[1] - mapGesture.y0) < 8 * mapDPR()) {
+      const now = performance.now(); if (now - mapTapT < 320 && mapTapP && Math.hypot(p[0] - mapTapP[0], p[1] - mapTapP[1]) < 30 * mapDPR()) { zoomMapAt(1.8, p[0], p[1]); mapTapT = 0; } else { mapTapT = now; mapTapP = p; }
+    }
+    mapStartGesture(); if (!mapPtrs.size) cv.style.cursor = 'grab';
+  };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('wheel', e => { e.preventDefault(); const [px, py] = mapLocal(e); const k = e.ctrlKey ? .012 : .0018; zoomMapAt(Math.exp(-e.deltaY * k), px, py); }, { passive: false });
+  cv.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+  $('zIn').addEventListener('click', () => { const cv2 = $('mapC'); zoomMapAt(1.6, cv2.width / 2, cv2.height / 2); });
+  $('zOut').addEventListener('click', () => { const cv2 = $('mapC'); zoomMapAt(1 / 1.6, cv2.width / 2, cv2.height / 2); });
+  $('zHome').addEventListener('click', () => { MV.x = H.x; MV.y = H.y; mapDirty(); });
+  addEventListener('resize', () => { if (!$('mapDlg').classList.contains('hide')) mapDirty(); });
 }
 
 /* ============================== postcards ============================== */
@@ -2255,6 +2325,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Escape') { closeAll(); return; }
   if (!e.repeat && e.code === 'KeyJ') { if (!$('journal').classList.contains('hide')) closeJournal(); else { closeAll(); openJournal(); } return; }
   if (!e.repeat && e.code === 'KeyM') { if (!$('mapDlg').classList.contains('hide')) closeMap(); else { closeAll(); openMap(); } return; }
+  if (!$('mapDlg').classList.contains('hide')) { const cv = $('mapC'), st = 60 / MV.s * mapDPR(); if (e.key === '+' || e.key === '=') zoomMapAt(1.4, cv.width / 2, cv.height / 2); else if (e.key === '-' || e.key === '_') zoomMapAt(1 / 1.4, cv.width / 2, cv.height / 2); else if (e.code === 'ArrowLeft' || e.code === 'KeyA') { MV.x -= st; mapDirty(); } else if (e.code === 'ArrowRight' || e.code === 'KeyD') { MV.x += st; mapDirty(); } else if (e.code === 'ArrowUp' || e.code === 'KeyW') { MV.y -= st; mapDirty(); } else if (e.code === 'ArrowDown' || e.code === 'KeyS') { MV.y += st; mapDirty(); } else if (e.code === 'Digit0' || e.code === 'KeyC') { MV.x = H.x; MV.y = H.y; mapDirty(); } return; }
   if (anyOverlay()) { if (!e.repeat && (e.code === 'Space' || e.code === 'Enter') && !$('letter').classList.contains('hide')) closeLetter(); return; }
   audioInit();
   if (DIRK.has(e.code)) { input.keys.add(e.code); H.target = null; }
@@ -2271,17 +2342,20 @@ canvas.addEventListener('pointerdown', e => {
   if (mode === 'title') { begin(); return; }
   if (ptr) return;
   audioInit(); e.preventDefault();
-  ptr = { id: e.pointerId, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: false };
+  ptr = { id: e.pointerId, sx: e.clientX, sy: e.clientY, cx: e.clientX, cy: e.clientY, t: performance.now(), moved: false, mouse: e.pointerType === 'mouse', steer: false };
   try { canvas.setPointerCapture(e.pointerId); } catch (er) {}
 });
 canvas.addEventListener('pointermove', e => {
   if (!ptr || e.pointerId !== ptr.id) return;
   const dx = e.clientX - ptr.sx, dy = e.clientY - ptr.sy, d = Math.hypot(dx, dy);
+  ptr.cx = e.clientX; ptr.cy = e.clientY;
+  if (ptr.mouse) { if (d > 8) ptr.steer = true; return; }
   if (!ptr.moved && d > 12) { ptr.moved = true; H.target = null; const st = $('stick'); st.style.left = ptr.sx + 'px'; st.style.top = ptr.sy + 'px'; st.classList.remove('hide'); }
   if (ptr.moved) { const R0 = 44, k = Math.min(1, d / R0); input.x = dx / (d || 1) * k; input.y = dy / (d || 1) * k; $('knob').style.transform = 'translate(' + (dx / (d || 1) * Math.min(d, R0)) + 'px,' + (dy / (d || 1) * Math.min(d, R0)) + 'px)'; }
 });
 function ptrEnd(e) {
   if (!ptr || e.pointerId !== ptr.id) return;
+  if (ptr.steer) { H.target = null; ptr = null; return; }
   if (!ptr.moved && performance.now() - ptr.t < 400 && mode === 'play' && !(cine && cine.lock)) {
     const r = canvas.getBoundingClientRect(); const dpr = CW / r.width;
     const lx = ((e.clientX - r.left) * dpr - OX) / SC, ly = ((e.clientY - r.top) * dpr - OY) / SC;
@@ -2294,6 +2368,7 @@ function ptrEnd(e) {
 }
 canvas.addEventListener('pointerup', ptrEnd); canvas.addEventListener('pointercancel', ptrEnd);
 addEventListener('contextmenu', e => e.preventDefault());
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
 document.addEventListener('touchmove', e => { if (e.target === canvas) e.preventDefault(); }, { passive: false });
 addEventListener('resize', resize);
 $('actBtn').addEventListener('click', action);
@@ -2308,13 +2383,7 @@ $('mapBtn').addEventListener('click', () => { closeAll(); openMap(); });
 $('camBtn').addEventListener('click', postcard);
 $('mapClose').addEventListener('click', closeMap);
 $('mapDlg').addEventListener('click', e => { if (e.target === $('mapDlg')) closeMap(); });
-$('zIn').addEventListener('click', () => { mapZ = Math.min(10, mapZ + 2); drawMap(); });
-$('zOut').addEventListener('click', () => { mapZ = Math.max(2, mapZ - 2); drawMap(); });
-$('zHome').addEventListener('click', () => { mapPan.x = mapPan.y = 0; drawMap(); });
-$('mapC').addEventListener('pointerdown', e => { mapDrag = { x: e.clientX, y: e.clientY, px: mapPan.x, py: mapPan.y }; try { $('mapC').setPointerCapture(e.pointerId); } catch (er) {} });
-$('mapC').addEventListener('pointermove', e => { if (!mapDrag) return; const k = MC / (mapZ * Math.min(window.devicePixelRatio || 1, 2)) * Math.min(window.devicePixelRatio || 1, 2); mapPan.x = mapDrag.px - (e.clientX - mapDrag.x) * k / 1; mapPan.y = mapDrag.py - (e.clientY - mapDrag.y) * k / 1; drawMap(); });
-$('mapC').addEventListener('pointerup', () => { mapDrag = null; }); $('mapC').addEventListener('pointercancel', () => { mapDrag = null; });
-$('mapC').addEventListener('wheel', e => { e.preventDefault(); mapZ = clamp(mapZ + (e.deltaY < 0 ? 1 : -1), 2, 10); drawMap(); }, { passive: false });
+initMapInput();
 $('lOk').addEventListener('click', closeLetter);
 $('letter').addEventListener('click', e => { if (e.target === $('letter')) closeLetter(); });
 $('pClose').addEventListener('click', () => $('photo').classList.add('hide'));
@@ -2362,6 +2431,6 @@ if (had) { $('beginBtn').textContent = 'Continue'; $('titleNote').textContent = 
 cam.x = H.x - LW / 2; cam.y = H.y - LH / 2 - LH * titleOff();
 setMute(muted); updateHUD();
 if (new URLSearchParams(location.search).has('og')) { $('titleNote').style.display = 'none'; $('beginBtn').parentElement.style.display = 'none'; S.hour = +new URLSearchParams(location.search).get('og') || 17.6; }
-window.__hw = { get herd() { return herd; }, train, lms: (x, y, r) => lmsNear(x, y, r), regionAt, biomeAt, postcard, openMap, drawMap, makeWish, setStar: v => { star = v; }, devils, spawnHerd, seen, camps: (x, y, r) => campsNear(x, y, r), SPR, H, S, RINGS, input, update, render, begin, action, whinny, activateRing, critters, W, get mode() { return mode; }, get cine() { return cine; }, confirmName, discover, spawnGhost, set hour(v) { S.hour = v; } };
+window.__hw = { drawMap, MV, zoomMapAt, buildMap, get mapTiles() { return mapTiles; }, get herd() { return herd; }, train, lms: (x, y, r) => lmsNear(x, y, r), regionAt, biomeAt, postcard, openMap, drawMap, makeWish, setStar: v => { star = v; }, devils, spawnHerd, seen, camps: (x, y, r) => campsNear(x, y, r), SPR, H, S, RINGS, input, update, render, begin, action, whinny, activateRing, critters, W, get mode() { return mode; }, get cine() { return cine; }, confirmName, discover, spawnGhost, set hour(v) { S.hour = v; } };
 requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
 })();
