@@ -1007,6 +1007,7 @@ function audioInit() {
     const rs = AC.createBufferSource(); rs.buffer = noiseBuf; rs.loop = true; rainF = AC.createBiquadFilter(); rainF.type = 'highpass'; rainF.frequency.value = 1400; rainG = AC.createGain(); rainG.gain.value = 0; rs.connect(rainF); rainF.connect(rainG); rainG.connect(ambBus); rs.start();
     for (const k in NOTE) KS[k] = ksBuffer(NOTE[k], NOTE[k] < 150 ? 3.2 : 2.4, NOTE[k] < 150 ? .9975 : .996, 2);
     mus.next = AC.currentTime + .3;
+    soundInit(rev);
   } catch (e) { AC = null; }
 }
 function pluck(note, t, vel, pan) { if (!AC || !KS[note]) return; const s = AC.createBufferSource(); s.buffer = KS[note]; const g = AC.createGain(); g.gain.value = vel; let node = g; if (AC.createStereoPanner) { const p = AC.createStereoPanner(); p.pan.value = pan || 0; g.connect(p); node = p; } s.connect(g); node.connect(musicBus); s.start(t); }
@@ -1083,11 +1084,12 @@ const BIOME_MUS = ['home', 'home', 'home', 'pale', 'red', 'red', 'bloom', 'pale'
 const CHORDS = CHORDSETS.home;
 const PATTERN = [0, 4, 2, 5, 1, 4, 3, 5];
 const CHIME = ['B4', 'D5', 'E5', 'G4', 'A4', 'E5', 'G5'];
-const mus = { next: 0, step: 0, lvl: 0, set: 'home' };
+const mus = { next: 0, step: 0, lvl: 0, set: 'home', en: 0 };
 function musicTick() {
   if (!AC || AC.state !== 'running') return;
   const target = mode === 'title' ? .6 : (cine ? (cine.kind === 'm' ? .3 : 1) : .85) * (1 - W.rain * .35);
   mus.lvl += (target - mus.lvl) * .05;
+  const enT = mode !== 'play' || cine ? .6 : ({ idle: .05, walk: .55, trot: .75, canter: 1 })[H.gait] ?? .3; mus.en += (enT - mus.en) * .012;
   const bpm = 66, e8 = 60 / bpm / 2;
   if (mus.next < AC.currentTime) mus.next = AC.currentTime + .05;
   while (mus.next < AC.currentTime + .2) {
@@ -1095,15 +1097,178 @@ function musicTick() {
     const st = st0, bar = (st >> 3), chord = CHORDSETS[mus.set][bar & 1];
     const night = nightAmt();
     const t = mus.next + rand(-.008, .012);
-    if (!(night > .6 && (i === 3 || i === 7) && R() < .5) && !(mus.set === 'ash' && PATTERN[i] > 1 && R() < .35)) {
+    const sparse = mus.en < .3 && !(i === 0 || i === 3 || (i === 6 && R() < .5));
+    if (i === 0 && (bar & 1) === 0 && mus.en < .45) pad([chord[0], chord[2], chord[4]], t, e8 * 15, .016 * mus.lvl * (1 - mus.en * 1.6));
+    if (!sparse && !(night > .6 && (i === 3 || i === 7) && R() < .5) && !(mus.set === 'ash' && PATTERN[i] > 1 && R() < .35)) {
       const ni = PATTERN[i], bass = ni < 2;
-      pluck(chord[ni], t, (bass ? .42 : .26) * mus.lvl * rand(.85, 1.05), bass ? -.15 : (ni - 3) * .18);
+      pluck(chord[ni], t, (bass ? .42 : .26) * mus.lvl * rand(.85, 1.05) * (.8 + mus.en * .25), bass ? -.15 : (ni - 3) * .18);
     }
-    if (i === 6 && (bar % 2 === 1) && R() < .45) pluck(pick(CHIMESETS[mus.set]), t + e8 * .5, .16 * mus.lvl, rand(-.6, .6));
+    if (i === 6 && (bar % 2 === 1) && R() < .3 + mus.en * .25) pluck(pick(CHIMESETS[mus.set]), t + e8 * .5, .16 * mus.lvl, rand(-.6, .6));
+    if (mus.en > .9 && (i === 2 || i === 5) && R() < .4) pluck(pick(CHIMESETS[mus.set]), t + e8 * .5, .09 * mus.lvl, rand(-.5, .5));
     if (cine && (cine.kind !== 'm' || cine.t > 4) && i % 2 === 0) pluck(pick(['E5', 'B5', 'G5', 'D5']), t + .03, .14, rand(-.7, .7));
     mus.next += e8; mus.step = (mus.step + 1) % 64;
   }
 }
+/* ============================== soundscape ============================== */
+// Hoofbeats are small synthesized recordings, one set per kind of ground, played with a little
+// variation each step. Around them sit soft ambience layers that follow the place, the hour and the pace.
+let hoofBus = null, padLP = null, musLP = null, PINK = null, hoofSide = 1;
+const HOOF = {}, AMB = {};
+const HOOFP = {
+  sand: { f0: 72, td: 42, tg: .75, rf: 0, nlp: .07, nd: 26, ng: .9, sc: .03 },
+  grass: { f0: 70, td: 40, tg: .7, rf: 0, nlp: .16, nd: 20, ng: .55, sc: .05 },
+  soft: { f0: 62, td: 38, tg: .55, rf: 0, nlp: .05, nd: 22, ng: .8, sc: .04 },
+  crust: { f0: 92, td: 58, tg: .55, rf: 0, nlp: .32, nd: 44, ng: .8, sc: .06 },
+  crunch: { f0: 80, td: 50, tg: .45, rf: 0, nlp: .45, nd: 32, ng: .95, sc: .1 },
+  stone: { f0: 125, td: 70, tg: .6, rf: 880, rd: 70, rg: .22, nlp: .55, nd: 90, ng: .45, sc: 0 },
+  wood: { f0: 150, td: 34, tg: .8, rf: 270, rd: 24, rg: .45, nlp: .3, nd: 70, ng: .3, sc: 0 },
+  rail: { f0: 115, td: 60, tg: .5, rf: 1900, rd: 38, rg: .16, nlp: .5, nd: 80, ng: .4, sc: 0 },
+  water: { f0: 52, td: 22, tg: .25, rf: 0, nlp: .22, nd: 11, ng: .9, sc: .12 }
+};
+function synthHoof(p, seed) {
+  const sr = AC.sampleRate, n = Math.floor(sr * .26), b = AC.createBuffer(1, n, sr), d = b.getChannelData(0), r = seeded(seed);
+  let lp = 0, lp2 = 0, ph = 0, ph2 = 0, mx = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i / sr, w = r() * 2 - 1;
+    ph += TAU * p.f0 * (1 + 1.4 * Math.exp(-t * 55)) / sr;
+    const thump = Math.sin(ph) * Math.exp(-t * p.td) * p.tg;
+    let res = 0; if (p.rf) { ph2 += TAU * p.rf * (1 + .02 * r()) / sr; res = Math.sin(ph2) * Math.exp(-t * p.rd) * p.rg; }
+    lp += (w - lp) * p.nlp; lp2 += (lp - lp2) * p.nlp;
+    const grit = (p.rf ? (w - lp2) * .5 : lp2 * 2.2) * Math.exp(-t * p.nd) * p.ng;
+    const sc = p.sc && t > .015 && r() < p.sc ? (r() * 2 - 1) * Math.exp(-t * 16) * .35 : 0;
+    const v = (thump + res + grit + sc) * Math.min(1, i / 40);
+    d[i] = v; mx = Math.max(mx, Math.abs(v));
+  }
+  if (mx > 0) for (let i = 0; i < n; i++) d[i] *= .9 / mx;
+  return b;
+}
+function makePink(sec) {
+  const sr = AC.sampleRate, n = Math.floor(sr * sec), b = AC.createBuffer(1, n, sr), d = b.getChannelData(0);
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+  for (let i = 0; i < n; i++) { const w = Math.random() * 2 - 1; b0 = .99886 * b0 + w * .0555179; b1 = .99332 * b1 + w * .0750759; b2 = .969 * b2 + w * .153852; b3 = .8665 * b3 + w * .3104856; b4 = .55 * b4 + w * .5329522; b5 = -.7616 * b5 - w * .016898; d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * .5362) * .11; b6 = w * .115926; }
+  const f = Math.floor(sr * .05); for (let i = 0; i < f; i++) { const k = i / f; d[i] = d[i] * k + d[n - f + i] * (1 - k); }
+  return b;
+}
+const bq = (type, f, q) => { const x = AC.createBiquadFilter(); x.type = type; x.frequency.value = f; if (q) x.Q.value = q; return x; };
+function ambLayer(buf, filters) {
+  const s = AC.createBufferSource(); s.buffer = buf; s.loop = true; let node = s;
+  for (const f of filters) { node.connect(f); node = f; }
+  const g = AC.createGain(); g.gain.value = 0; node.connect(g); g.connect(ambBus); s.start(0, Math.random() * (buf.duration - .2)); return g;
+}
+function soundInit(rev) {
+  for (const k in HOOFP) HOOF[k] = [0, 1, 2, 3].map(v => synthHoof(HOOFP[k], k.length * 97 + v * 13 + 5));
+  hoofBus = AC.createGain(); hoofBus.gain.value = 1; hoofBus.connect(sfxBus);
+  PINK = makePink(6);
+  AMB.rush = ambLayer(PINK, [bq('highpass', 650), bq('lowpass', 3200)]);
+  AMB.water = ambLayer(PINK, [bq('lowpass', 850), bq('highpass', 140)]);
+  AMB.shimmer = ambLayer(noiseBuf, [bq('bandpass', 7400, 2.2)]);
+  { const trem = AC.createGain(); trem.gain.value = .55; const lfo = AC.createOscillator(); lfo.frequency.value = 21; const lg = AC.createGain(); lg.gain.value = .45; lfo.connect(lg); lg.connect(trem.gain); lfo.start(); AMB.cicada = ambLayer(noiseBuf, [bq('bandpass', 5600, 7), trem]); }
+  { const g = AC.createGain(); g.gain.value = 0; const lp = bq('lowpass', 260); for (const f of [55, 82.4, 110.3]) { const o = AC.createOscillator(); o.frequency.value = f; const og = AC.createGain(); og.gain.value = f > 100 ? .3 : 1; o.connect(og); og.connect(lp); o.start(); } lp.connect(g); g.connect(ambBus); AMB.drone = g; }
+  // the old white-noise wind becomes a softer pink wind
+  try { windSrc.stop(); } catch (e) {}
+  windSrc = AC.createBufferSource(); windSrc.buffer = PINK; windSrc.loop = true; windSrc.connect(windF); windSrc.start(0, Math.random() * 4); windF.Q.value = .55;
+  // gentle glue: a soft compressor on everything, a darker filter on the music at night, a warm pad
+  const comp = AC.createDynamicsCompressor(); comp.threshold.value = -20; comp.knee.value = 18; comp.ratio.value = 3; comp.attack.value = .02; comp.release.value = .3;
+  master.disconnect(); master.connect(comp); comp.connect(AC.destination);
+  musLP = bq('lowpass', 6000, .5); musicBus.disconnect(); musicBus.connect(musLP); musLP.connect(master); musicBus.connect(rev);
+  padLP = bq('lowpass', 900, .4); padLP.connect(musicBus);
+}
+function playHoof(surf, gait, vol, pan, t0) {
+  if (!AC || !HOOF[surf]) return;
+  const arr = HOOF[surf], s = AC.createBufferSource(); s.buffer = arr[(R() * arr.length) | 0];
+  s.playbackRate.value = rand(.9, 1.1) * (gait === 'canter' ? 1.05 : gait === 'walk' ? .96 : 1);
+  const g = AC.createGain(); g.gain.value = vol * rand(.82, 1.04); let node = g;
+  hoofSide = -hoofSide; if (AC.createStereoPanner) { const p = AC.createStereoPanner(); p.pan.value = pan != null ? pan : hoofSide * .1; g.connect(p); node = p; }
+  s.connect(g); node.connect(hoofBus); s.start(AC.currentTime + (t0 || 0));
+}
+function ptone(f, d, v, pan, f2, t0, type) {
+  if (!AC) return; const t = AC.currentTime + (t0 || 0), o = AC.createOscillator(), g = AC.createGain(); o.type = type || 'sine';
+  o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + Math.min(.02, d * .3)); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+  let node = g; if (AC.createStereoPanner) { const p = AC.createStereoPanner(); p.pan.value = pan || 0; g.connect(p); node = p; }
+  o.connect(g); node.connect(sfxBus); o.start(t); o.stop(t + d + .05);
+}
+const nsfx = {
+  cricket(pan) { const f = rand(4100, 4700), n = 3 + (R() * 3 | 0); for (let i = 0; i < n; i++) ptone(f, .028, .009, pan, null, i * .05); },
+  songbird(pan, v) {
+    const kind = (R() * 3) | 0; let t = 0;
+    if (kind === 0) { for (let i = 0; i < 4; i++) { const f = rand(2900, 3500) - i * 180; ptone(f, .11, .016 * v, pan, f * .82, t); t += .14; } }
+    else if (kind === 1) { const a = rand(3300, 3800), b2 = a * .84; for (let i = 0; i < 7; i++) { ptone(i & 1 ? b2 : a, .05, .012 * v, pan, null, t); t += .06; } }
+    else { ptone(rand(2400, 2700), .2, .016 * v, pan, rand(3600, 4000), 0); ptone(rand(3000, 3300), .16, .013 * v, pan, rand(2200, 2500), .28); }
+  },
+  dove(pan) { const v = .02; ptone(500, .32, v, pan, 560, 0); ptone(600, .55, v * 1.2, pan, 520, .36); ptone(470, .3, v * .8, pan, 450, 1.0); ptone(470, .3, v * .7, pan, 445, 1.36); },
+  breath(k) { if (!AC) return; const t = AC.currentTime, s = AC.createBufferSource(); s.buffer = PINK; const f = bq('bandpass', 520 * k, 1.1), g = AC.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.05, t + .05); g.gain.exponentialRampToValueAtTime(.0001, t + .26); s.connect(f); f.connect(g); g.connect(sfxBus); s.start(t, Math.random() * 4); s.stop(t + .3); },
+  rustle(pan, v) { if (!AC) return; const t = AC.currentTime, s = AC.createBufferSource(); s.buffer = PINK; const f = bq('bandpass', rand(1800, 2800), .9), g = AC.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.03 * (v || 1), t + .04); g.gain.exponentialRampToValueAtTime(.0001, t + .22); let node = g; if (AC.createStereoPanner) { const p = AC.createStereoPanner(); p.pan.value = pan; g.connect(p); node = p; } s.connect(f); f.connect(g); node.connect(sfxBus); s.start(t, Math.random() * 4); s.stop(t + .25); },
+  splashIn() { playHoof('water', 'walk', .5); noise(.35, .06, 1800, 'highpass', .03); },
+  nicker() { if (!AC) return; for (let i = 0; i < 3; i++) { ptone(118 - i * 6, .14, .05, 0, 96, i * .13, 'triangle'); noise(.12, .03, 420, 'bandpass', i * .13); } }
+};
+function pad(notes, t, dur, v) {
+  for (const nn of notes) { const f = NOTE[nn]; if (!f) continue; for (const det of [-5, 5]) { const o = AC.createOscillator(); o.type = 'triangle'; o.frequency.value = f; o.detune.value = det; const g = AC.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(v, t + dur * .4); g.gain.linearRampToValueAtTime(.0001, t + dur * 1.08); o.connect(g); g.connect(padLP); o.start(t); o.stop(t + dur * 1.12); } }
+}
+function waterDist() {
+  let best = 999;
+  for (const o of waterBodies(H.x - LW / 2, H.y - LH / 2)) { if (!o.rx) continue; const e = Math.hypot((H.x - o.x) / o.rx, (H.y - o.y) / o.ry); best = Math.min(best, Math.max(0, e - 1) * (o.rx + o.ry) / 2); }
+  if (S.river) best = Math.min(best, Math.max(0, Math.abs(H.y - riverY(H.x)) - riverHW(H.x)));
+  for (const L of lmsNear(H.x, H.y, 100)) if (L.type === 'windmill') best = Math.min(best, Math.max(0, dist(H.x, H.y, L.trough.x, L.trough.y) - 10) * 1.6);
+  return best;
+}
+let ambSetT = 0;
+function ambTick(dt) {
+  if (!AC || !AMB.rush) return;
+  ambSetT -= dt; if (ambSetT > 0) return; ambSetT = .15;
+  const now = AC.currentTime, b = mode === 'title' ? 1 : H.biome, n = nightAmt(), h = S.hour, sp = Math.hypot(H.vx, H.vy);
+  const set = (g, v, tc) => g.gain.setTargetAtTime(v, now, tc || 1.2);
+  const windB = [.05, .032, .024, .045, .04, .03, .022, .055, .045][b] || .035;
+  set(windG, windB * (1 + W.rain * .8) * (1 - n * .3) * (.72 + .28 * Math.sin(T * .13) * Math.sin(T * .05 + 1)), 2);
+  windF.frequency.setTargetAtTime(320 + 140 * Math.sin(T * .11) + (b === 7 || b === 0 ? 140 : 0), now, 2);
+  set(AMB.rush, mode === 'play' ? clamp((sp - 40) / 42, 0, 1) * .06 : 0, .45);
+  const wd = mode === 'play' ? waterDist() : 999;
+  set(AMB.water, wd < 90 ? (1 - wd / 90) * .085 * (.65 + .35 * Math.abs(Math.sin(T * .9) * Math.sin(T * .37 + 1))) : 0, .5);
+  const hot = h > 9.5 && h < 17.5 ? Math.min(1, (h - 9.5) / 1.5, (17.5 - h) / 1.5) : 0;
+  set(AMB.cicada, hot * ([1, 2, 5].includes(b) ? .02 : b === 6 ? .011 : .004) * (1 - W.rain), 2.5);
+  set(AMB.shimmer, (b === 7 ? .02 : b === 3 ? .011 : 0) * (1 - n * .4), 2.5);
+  set(AMB.drone, b === 8 ? .04 : 0, 3);
+  rainG.gain.setTargetAtTime(W.rain * .2, now, 1);
+  musLP.frequency.setTargetAtTime(1700 + (1 - n) * 4500, now, 3);
+}
+
+const GAITV = { walk: .26, trot: .3, canter: .34 };
+function playStep(surf, bi) {
+  if (!AC || !HOOF.sand) return;
+  if (surf === 'sand' && (H.biome === 2 || H.biome === 6)) surf = 'grass';
+  const g = H.gait === 'idle' ? 'walk' : H.gait, v = (g === 'canter' ? [.36, .26, .42][bi % 3] : GAITV[g] || .26) * (cine ? .6 : 1);
+  playHoof(surf, g, v);
+  if (g === 'trot') playHoof(surf, g, v * .55, -hoofSide * .1, .028);
+  if (g === 'canter' && bi % 3 === 2 && R() < .7) nsfx.breath(rand(.9, 1.1));
+}
+let ambSchedT = 1;
+function ambient(dt) {
+  ambSchedT -= dt; if (ambSchedT > 0) return; ambSchedT = rand(.5, 1.3);
+  const n = nightAmt(), h = S.hour, b = H.biome, life = [1, 2, 5, 6].includes(b) ? 1 : b === 0 || b === 3 ? .45 : .6, side = () => rand(-.75, .75);
+  if (W.rain > .5) return;
+  if (n > .5 && R() < .75 * life) nsfx.cricket(side());
+  if (n > .8 && R() < .025) { const p = side(); ptone(392, .32, .013, p, 370); ptone(392, .45, .011, p, 360, .5); }
+  const dawn = h > 5.2 && h < 8.6 ? 1 - Math.abs(h - 6.8) / 1.8 : 0, dusk = h > 17.6 && h < 19.6 ? .6 : 0;
+  if (dawn > 0 && R() < dawn * .8 * life) nsfx.songbird(side(), .7 + dawn * .5);
+  else if (n < .2 && R() < .1 * life) nsfx.songbird(side(), .45);
+  if ((dawn > .3 || dusk) && R() < .06 * life) nsfx.dove(side());
+  for (const L of lmsNear(H.x, H.y, 160)) if (L.type === 'windmill' && dist(L.x, L.y, H.x, H.y) < 140 && R() < .3) sfx.creak();
+}
+const BENDK = { tuft: 1, sage: 1, poppy: 1, lupine: 1, lily: 1, marigold: 1, reed: 1, yucca: 1 };
+let bendScanT = 0, rustleCD = 0;
+function bendFoliage(dt) {
+  rustleCD -= dt; bendScanT -= dt; if (bendScanT > 0) return; bendScanT = .08;
+  const sp = Math.hypot(H.vx, H.vy); if (sp < 4 || H.z > 2) return;
+  forObjsNear(H.x, H.y, 16, o => {
+    if (!BENDK[o.kind]) return; const d = Math.hypot(o.x - H.x, (o.y - H.y) * 1.6); if (d > 10) return;
+    if (o.bendAt && T - o.bendAt < .7) return;
+    o.bendAt = T; o.bendDir = Math.sign(o.x - H.x) || (H.vx > 0 ? 1 : -1);
+    if (rustleCD <= 0) { rustleCD = .14; nsfx.rustle(clamp((o.x - H.x) / 20, -.5, .5), H.gait === 'walk' ? .6 : 1); }
+    if (o.kind === 'poppy' || o.kind === 'lupine' || o.kind === 'marigold' || o.kind === 'lily') if (R() < .3) part(o.x, o.y - 5, o.bendDir * rand(4, 12), rand(-18, -8), 1, pick(['#f28a2e', '#b49cf0', '#f6d24a', '#fff6ea']), 'petal', 40);
+  });
+}
+const bendOff = o => { if (!o.bendAt) return 0; const k = 1 - (T - o.bendAt) / .9; if (k <= 0) return 0; return Math.round(o.bendDir * 2 * k * Math.cos((1 - k) * 11)); };
+
 setInterval(musicTick, 40);
 function setMute(m) { muted = m; store.mute(m); if (master) master.gain.value = m ? 0 : .9; $('muteBtn').style.opacity = m ? .55 : 1; $('noteP').setAttribute('fill', m ? '#a08070' : '#4a2c1f'); }
 
@@ -1333,7 +1498,8 @@ function updHorse(dt) {
   if (mag > .15) H.holdT += dt; else H.holdT = Math.max(0, H.holdT - dt * 4);
   let top = input.run ? 82 : (H.holdT < 1.4 ? 30 : H.holdT < 3.4 ? 52 : 80);
   if (mag < .8) top = Math.min(top, 30 * mag / .8 + 4);
-  H.inWater = waterAt(H.x, H.y);
+  { const wasW = H.inWater; H.inWater = waterAt(H.x, H.y); if (H.inWater && !wasW && mode === 'play') { nsfx.splashIn(); for (let k = 0; k < 3; k++) parts.push({ x: H.x + rand(-3, 3), y: H.y, vx: 0, vy: 0, life: .5 + k * .2, max: .5 + k * .2, c: '#e8f4ff', kind: 'ripple', g: 0, z: 0 }); for (let k = 0; k < 6; k++) part(H.x + rand(-4, 4), H.y, rand(-20, 20), rand(-40, -18), .5, R() < .5 ? '#cfefff' : '#ffffff', 'drop', 140); } }
+  if (mode === 'play') bendFoliage(dt);
   if (H.inWater) { top *= .55; H.wetT += dt; } else { if (H.wetT > .6) H.shakeIn = .35; H.wetT = 0; }
   if (H.shakeIn > 0) { H.shakeIn -= dt; if (H.shakeIn <= 0) { H.shakeT = .6; sfx.shake(); for (let i = 0; i < 16; i++) part(H.x + rand(-9, 9), H.y - rand(8, 18), rand(-40, 40), rand(-30, -5), .6, R() < .5 ? '#cfefff' : '#ffffff', 'drop', 160); } }
   if (H.shakeT > 0) H.shakeT -= dt;
@@ -1351,10 +1517,10 @@ function updHorse(dt) {
   if (Math.abs(H.vx) > 3) H.face = H.vx > 0 ? 1 : -1;
   if (sp > 3) H.view = Math.abs(H.vy) > Math.abs(H.vx) * 1.5 ? (H.vy > 0 ? 'front' : 'back') : 'side';
   const stride = { walk: 24, trot: 32, canter: 44 }[H.gait] || 24;
-  if (sp > 2.5) { const before = H.anim; H.anim += sp * dt / stride; const beats = H.gait === 'walk' ? 4 : H.gait === 'trot' ? 2 : 3; if (Math.floor(before * beats) !== Math.floor(H.anim * beats)) footfall(); }
+  if (sp > 2.5) { const before = H.anim; H.anim += sp * dt / stride; const beats = H.gait === 'walk' ? 4 : H.gait === 'trot' ? 2 : 3; if (Math.floor(before * beats) !== Math.floor(H.anim * beats)) footfall(Math.floor(H.anim * beats) % beats); }
   else H.anim += dt * .5;
   // idle life
-  if (H.state === 'free' && H.gait === 'idle' && mode === 'play') { H.idleT += dt; H.grazeCD -= dt; if (H.grazeCD < 0 && H.idleT > 4) { H.grazeCD = rand(7, 14); setState('graze'); } } else H.idleT = 0;
+  if (H.state === 'free' && H.gait === 'idle' && mode === 'play') { H.idleT += dt; H.grazeCD -= dt; if (H.idleT > 5 && R() < dt * .025) nsfx.nicker(); if (H.grazeCD < 0 && H.idleT > 4) { H.grazeCD = rand(7, 14); setState('graze'); } } else H.idleT = 0;
   H.blinkT -= dt; if (H.blinkT < 0) { H.blink = .14; H.blinkT = rand(2, 5); } if (H.blink > 0) H.blink -= dt;
   H.tp += dt * (H.gait === 'idle' ? .35 : 1);
   if (H.state === 'hop') { H.vz -= 380 * dt; H.z += H.vz * dt; if (H.z <= 0) { H.z = 0; setState('free'); dust(H.x, H.y, 4, 0); } }
@@ -1496,7 +1662,7 @@ function updWeather(dt) {
   if (W.bloom > 0 && W.rain < .2) W.bloom -= dt;
   if (W.rainbow > 0) W.rainbow -= dt;
   W.wind = 1 + Math.sin(T * .07) * .6 + W.rain;
-  if (AC) { windG.gain.value = (.05 + .06 * Math.sin(T * .13) * Math.sin(T * .05)) * (1 + W.rain); windF.frequency.value = 380 + 160 * Math.sin(T * .11); rainG.gain.value = W.rain * .22; }
+  if (AC) ambTick(dt);
   // drops
   if (W.rain > .05) { const n = Math.floor(W.rain * 4 + R()); for (let i = 0; i < n; i++) drops.push({ x: rand(-20, LW + 20), y: rand(-20, LH), l: rand(.3, .8), t: 0 }); }
   for (let i = drops.length - 1; i >= 0; i--) { const d = drops[i]; d.t += dt; if (d.t > d.l) { drops.splice(i, 1); if (R() < .5) parts.push({ x: d.x + cam.x - 4 + d.t * 20, y: d.y + d.t * 160 + cam.y, vx: 0, vy: 0, life: .35, max: .35, c: '#e8f4ff', kind: 'ripple', g: 0, z: 0 }); } }
@@ -1736,11 +1902,11 @@ function drawThing(o, cx, cy, tt) {
     case 'devil': { const d = o.d, a = clamp(Math.min(d.t / 2, (d.life - d.t) / 2), 0, 1), cs = dustCols(H.biome); b.globalAlpha = .8 * a; for (let k = 0; k < 22; k++) { const ang = T * 9 + k * .75, h = k * 1.5, r = 1.5 + k * .42; b.fillStyle = cs[k & 1]; b.fillRect(Math.floor(d.x - cx + Math.cos(ang) * r), Math.floor(d.y - cy - h + Math.sin(ang) * r * .3), k > 14 ? 1 : 2, 1); } b.globalAlpha = 1; return; }
     case 'lm_windmill': { at(o.spr, o.x, o.y); drawBlades(Math.floor(o.x - cx), Math.floor(o.y - cy) - 49); return; }
     case 'lm_mailbox': return at(o.lm && S.mail[o.lm.id] ? SPR.lm_mailboxD : SPR.lm_mailbox, o.x, o.y);
-    case 'poppy': case 'lupine': case 'lily': { const sway = Math.sin(tt * 1.4 + o.t) * W.wind; return at(o.spr, o.x + (Math.abs(sway) > 1.2 ? Math.sign(sway) : 0), o.y); }
-    case 'marigold': return at(W.bloom > 0 || o.bl === 6 ? SPR.marigoldB : SPR.marigold, o.x, o.y);
+    case 'poppy': case 'lupine': case 'lily': { const sway = Math.sin(tt * 1.4 + o.t) * W.wind; return at(o.spr, o.x + bendOff(o) + (Math.abs(sway) > 1.2 ? Math.sign(sway) : 0), o.y); }
+    case 'marigold': return at(W.bloom > 0 || o.bl === 6 ? SPR.marigoldB : SPR.marigold, o.x + bendOff(o), o.y);
     case 'dig': return;
-    case 'sage': case 'tuft': { const sway = Math.sin(tt * 1.6 + o.t) * W.wind; if (Math.abs(sway) > 1.1 && o.kind === 'tuft') { at(o.spr, o.x + (sway > 0 ? 1 : -1), o.y); return; } return at(o.spr, o.x, o.y); }
-    case 'reed': { const sway = Math.sin(tt * 1.3 + o.t) * W.wind; return at(o.spr, o.x + (Math.abs(sway) > 1 ? Math.sign(sway) : 0), o.y); }
+    case 'sage': case 'tuft': { const sway = Math.sin(tt * 1.6 + o.t) * W.wind, bo = bendOff(o); if (Math.abs(sway) > 1.1 && o.kind === 'tuft') { at(o.spr, o.x + bo + (sway > 0 ? 1 : -1), o.y); return; } return at(o.spr, o.x + bo, o.y); }
+    case 'reed': { const sway = Math.sin(tt * 1.3 + o.t) * W.wind; return at(o.spr, o.x + bendOff(o) + (Math.abs(sway) > 1 ? Math.sign(sway) : 0), o.y); }
     default: if (o.spr) return at(o.spr, o.x, o.y, o.kind === 'saguaro' && (o.v & 4));
   }
 }
@@ -1818,9 +1984,10 @@ function surfaceAt(x, y) {
   }
   const b = H.biome; return b === 7 ? 'soft' : b === 8 ? 'crunch' : b === 4 ? 'stone' : b === 3 ? 'crust' : 'sand';
 }
-function footfall() {
-  const surf = surfaceAt(H.x, H.y); sfx.hoofS(surf, H.gait);
+function footfall(bi) {
+  const surf = surfaceAt(H.x, H.y); playStep(surf, bi || 0);
   if (H.inWater) { for (let k = 0; k < 3; k++) part(H.x + rand(-4, 4), H.y, rand(-14, 14), rand(-30, -14), .4, R() < .5 ? '#cfefff' : '#ffffff', 'drop', 140); return; }
+  if (H.gait === 'walk' && [0, 3, 7, 8].includes(H.biome) && R() < .3) part(H.x - H.face * 4 + rand(-2, 2), H.y, -H.face * rand(2, 8), rand(-8, -3), .5, dustCols(H.biome)[0], 'dust', 0);
   if (H.gait === 'canter' || (H.gait === 'trot' && R() < .4)) dust(H.x - H.face * 6, H.y, H.gait === 'canter' ? 2 : 1, 1);
   if (H.biome === 6 && H.gait !== 'walk' && R() < .7) part(H.x + rand(-5, 5), H.y - 2, rand(-14, 14), rand(-26, -10), 1, pick(['#f28a2e', '#b49cf0', '#f6d24a', '#fff6ea']), 'petal', 50);
   if (surf !== 'wood' && surf !== 'rail' && surf !== 'stone') addPrint(H.x + rand(-2, 2) - H.face * 2, H.y + (prints.length & 1 ? 1 : -1), H.biome);
@@ -1920,7 +2087,7 @@ function updHerd(dt) {
     if (sp > 2.5) { const bf = m.anim; m.anim += sp * dt / stride; const beats = m.gait === 'walk' ? 4 : m.gait === 'trot' ? 2 : 3; if (Math.floor(bf * beats) !== Math.floor(m.anim * beats)) { steps++; if (m.gait === 'canter' && R() < .5) dust(m.x - m.face * 6, m.y, 1, 0, biomeAt(m.x, m.y)); if (R() < .5) addPrint(m.x - m.face * 2, m.y); } }
     else m.anim += dt * .4;
   }
-  herdSndT -= dt; if (steps && herdSndT <= 0 && dist(h.cx, h.cy, H.x, H.y) < 220) { herdSndT = .07; noise(.05, .05, 820); }
+  herdSndT -= dt; if (steps && herdSndT <= 0 && dist(h.cx, h.cy, H.x, H.y) < 220) { herdSndT = .09; const hd = dist(h.cx, h.cy, H.x, H.y); playHoof('sand', 'trot', .16 * (1 - hd / 240), clamp((h.cx - H.x) / 160, -.8, .8)); }
 }
 function drawHerdHorse(m, cx, cy) {
   const b = bctx, set = herdSet(m.coat); let spr;
@@ -2004,11 +2171,6 @@ function checkRegion(dt) {
     const first = !S.regions[r.key]; S.regions[r.key] = 1; S.curRegion = r.key;
     if (T - lastBanner > 5) { $('rgN').textContent = r.name; $('rgB').textContent = (first ? 'New place · ' : '') + BIOME_NAME[r.b]; $('region').classList.add('show'); bannerT = 3.6; lastBanner = T; if (first) sfx.discover(); }
   }
-}
-function ambient(dt) {
-  ambT -= dt; if (ambT > 0) return; ambT = rand(.6, 1.6);
-  if (nightAmt() > .5 && [1, 2, 5, 6].includes(H.biome) && R() < .7) sfx.cricket();
-  for (const L of lmsNear(H.x, H.y, 160)) if (L.type === 'windmill' && dist(L.x, L.y, H.x, H.y) < 140 && R() < .35) sfx.creak();
 }
 const MAPPAL = ['#f0c58e', '#dcbf86', '#c3c27e', '#f4ead6', '#d98e62', '#c7bd8e', '#eaa66c', '#fbf9f4', '#5c5054'];
 // The map is painted once, one pixel per explored cell, into tiles. Drawing it is then just scaling those tiles.
@@ -2538,6 +2700,6 @@ if (had) { $('beginBtn').textContent = 'Continue'; $('titleNote').textContent = 
 cam.x = H.x - LW / 2; cam.y = H.y - LH / 2 - LH * titleOff();
 setMute(muted); updateHUD();
 if (new URLSearchParams(location.search).has('og')) { $('titleNote').style.display = 'none'; $('beginBtn').parentElement.style.display = 'none'; S.hour = +new URLSearchParams(location.search).get('og') || 17.6; }
-window.__hw = { mTest: () => { S.letters = 12; S.found.harmonica = true; S.found.ticket = true; }, get mCine() { return cine; }, mWhale,  drawMap, MV, zoomMapAt, buildMap, get mapTiles() { return mapTiles; }, get herd() { return herd; }, train, lms: (x, y, r) => lmsNear(x, y, r), regionAt, biomeAt, postcard, openMap, drawMap, makeWish, setStar: v => { star = v; }, devils, spawnHerd, seen, camps: (x, y, r) => campsNear(x, y, r), SPR, H, S, RINGS, input, update, render, begin, action, whinny, activateRing, critters, W, get mode() { return mode; }, get cine() { return cine; }, confirmName, discover, spawnGhost, set hour(v) { S.hour = v; } };
+window.__hw = { get AC() { return AC; }, AMB, get mus() { return mus; }, HOOF, mTest: () => { S.letters = 12; S.found.harmonica = true; S.found.ticket = true; }, get mCine() { return cine; }, mWhale,  drawMap, MV, zoomMapAt, buildMap, get mapTiles() { return mapTiles; }, get herd() { return herd; }, train, lms: (x, y, r) => lmsNear(x, y, r), regionAt, biomeAt, postcard, openMap, drawMap, makeWish, setStar: v => { star = v; }, devils, spawnHerd, seen, camps: (x, y, r) => campsNear(x, y, r), SPR, H, S, RINGS, input, update, render, begin, action, whinny, activateRing, critters, W, get mode() { return mode; }, get cine() { return cine; }, confirmName, discover, spawnGhost, set hour(v) { S.hour = v; } };
 requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
 })();
