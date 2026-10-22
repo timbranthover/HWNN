@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>A Horse With No Name</title>
+<meta name="description" content="A quiet desert to wander with a little horse. Find plants, birds, rocks and things, follow the nine humming stones, and remember a name.">
+<meta name="theme-color" content="#f2c894">
+<meta property="og:type" content="website">
+<meta property="og:title" content="A Horse With No Name">
+<meta property="og:description" content="A quiet desert to wander with a little horse. Plants, birds, rocks and things, nine humming stones, and a name to remember.">
+<meta property="og:image" content="https://hwnn.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://hwnn.vercel.app/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://hwnn.vercel.app/og.png">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  /* Layout: full-bleed pixel world; soft paper panels float over it like notes in a saddlebag. */
+  --sand:#f2c894; --paper:#fff4e2; --paper2:#f8e3c4; --ink:#4a2c1f; --ink2:#8a5f45; --rose:#e9845a; --sky:#7fb6d9; --sage:#7fae7a; --gold:#f4c04e;
+  --font:'Pixelify Sans',ui-rounded,'Trebuchet MS',system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{margin:0;height:100%;background:var(--sand);color:var(--ink);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;font-family:var(--font)}
+canvas#c{position:fixed;inset:0;width:100vw;height:100vh;display:block;image-rendering:pixelated}
+button{font-family:var(--font);color:var(--ink);cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:3px solid var(--rose);outline-offset:2px}
+.px{background:var(--paper);border:0;box-shadow:0 0 0 3px var(--ink),0 5px 0 3px var(--ink);border-radius:2px}
+.px:active{transform:translateY(3px);box-shadow:0 0 0 3px var(--ink),0 2px 0 3px var(--ink)}
+.hide{opacity:0!important;pointer-events:none!important;visibility:hidden}
+.fade{transition:opacity .6s,visibility .6s}
+
+/* HUD */
+#hud{position:fixed;background:rgba(255,244,226,.72);padding:6px 10px 7px;box-shadow:0 0 0 2px rgba(74,44,31,.25);left:calc(12px + env(safe-area-inset-left,0px));top:calc(10px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:5px;pointer-events:none;text-shadow:0 2px 0 rgba(255,244,226,.85),0 0 6px rgba(255,244,226,.6)}
+#nameLbl{font-size:clamp(15px,2.4vmin,22px);font-weight:600;letter-spacing:.02em}
+#dayLbl{font-size:clamp(12px,1.9vmin,16px);color:var(--ink2)}
+#stones{display:flex;gap:4px;margin-top:2px}
+#stones i{width:9px;height:9px;background:rgba(74,44,31,.18);box-shadow:inset 0 0 0 2px rgba(74,44,31,.45);display:block}
+#stones i.on{background:#bfe6ff;box-shadow:inset 0 0 0 2px #4b7fa6,0 0 6px #bfe6ff}
+#topR{position:fixed;right:calc(12px + env(safe-area-inset-right,0px));top:calc(12px + env(safe-area-inset-top,0px));display:flex;gap:12px}
+.ib{height:42px;min-width:42px;padding:0 10px;font-size:16px;display:flex;align-items:center;gap:6px;font-weight:600}
+.ib svg{width:20px;height:20px;shape-rendering:crispEdges}
+#btmR{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;gap:14px;align-items:flex-end}
+#actBtn{min-width:86px;height:56px;font-size:19px;font-weight:700;background:#ffe7b8;padding:0 14px}
+#whinBtn{width:56px;height:56px;font-size:24px;background:#ffd3c4;display:grid;place-items:center}
+#whinBtn svg{width:26px;height:26px;shape-rendering:crispEdges}
+
+/* toasts */
+#toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:min(92vw,380px)}
+.toast{display:flex;gap:10px;align-items:center;padding:8px 14px 8px 8px;background:var(--paper);box-shadow:0 0 0 3px var(--ink),0 4px 0 3px var(--ink);animation:tin .45s cubic-bezier(.2,1.4,.4,1);max-width:100%;box-sizing:border-box}
+.toast img{width:44px;height:44px;image-rendering:pixelated;background:var(--paper2);flex:none}
+.toast b{display:block;font-size:12px;color:var(--rose);letter-spacing:.06em;text-transform:uppercase}
+.toast span{font-size:17px;font-weight:600}
+.toast.out{animation:tout .5s forwards}
+@keyframes tin{from{transform:translateY(16px) scale(.9);opacity:0}}
+@keyframes tout{to{transform:translateY(8px);opacity:0}}
+
+/* cards */
+#card{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + max(74px,9vh));transform:translateX(-50%);width:min(86vw,460px);text-align:center;padding:22px 22px 18px;box-sizing:border-box;background:rgba(255,244,226,.94);box-shadow:0 0 0 3px var(--ink),0 6px 0 3px var(--ink)}
+#card .k{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+#card .t{font-size:clamp(18px,3vmin,23px);line-height:1.45;margin-top:10px;text-wrap:balance}
+#card .s{font-size:13px;color:var(--ink2);margin-top:12px}
+#dayCard{position:fixed;left:0;right:0;top:34%;text-align:center;font-size:clamp(34px,8vmin,64px);font-weight:700;color:#fff6e6;text-shadow:0 3px 0 rgba(74,44,31,.55);pointer-events:none}
+
+/* title */
+#title{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:max(9vh,28px)!important;gap:clamp(10px,2.4vh,20px);text-align:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));background:radial-gradient(ellipse 70% 42% at 50% 24%,rgba(255,240,214,.82),rgba(255,240,214,.35) 60%,rgba(255,240,214,0));box-sizing:border-box}
+#title h1{margin:0;font-size:clamp(36px,9vmin,92px);line-height:.98;font-weight:700;color:#fff8ec;text-shadow:0 4px 0 #d9824f,0 8px 0 #7a3f26,0 14px 18px rgba(80,30,10,.25);text-wrap:balance}
+#title h1 small{display:block;font-size:.4em;letter-spacing:.3em;color:#c0623a;margin:.3em 0 .25em;text-shadow:none}
+#title p{margin:0;font-size:clamp(15px,2.4vmin,20px);color:#5a3322;background:rgba(255,244,226,.78);padding:6px 12px;line-height:1.45;max-width:30ch}
+#title .row{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+#title .big{font-size:22px;font-weight:700;padding:12px 26px;background:#ffe7b8}
+#title .note{font-size:13px;color:#6a4330;background:none;padding:0}
+
+/* journal */
+#journal{position:fixed;inset:0;display:grid;place-items:center;background:rgba(74,44,31,.35);padding:16px;box-sizing:border-box}
+#jbox{width:100%;max-width:620px;max-height:min(88vh,720px);display:flex;flex-direction:column;background:var(--paper);box-shadow:0 0 0 3px var(--ink),0 7px 0 3px var(--ink);box-sizing:border-box}
+#jhead{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;gap:10px}
+#jhead h2{margin:0;font-size:24px;text-wrap:balance}
+#jhead .cnt{font-size:14px;color:var(--ink2)}
+#jtabs{display:flex;gap:6px;padding:0 12px 10px;flex-wrap:wrap}
+#jtabs button{border:0;background:var(--paper2);padding:7px 11px;font-size:15px;box-shadow:0 0 0 2px var(--ink2)}
+#jtabs button.on{background:var(--ink);color:var(--paper)}
+#jbody{overflow:auto;padding:4px 14px 14px;min-height:0}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ent{background:var(--paper2);padding:8px 6px;text-align:center;box-shadow:0 0 0 2px rgba(74,44,31,.35);border:0;font:inherit;color:inherit}
+.ent img{width:64px;height:64px;image-rendering:pixelated;display:block;margin:0 auto}
+.ent .n{font-size:14px;margin-top:4px;line-height:1.15;min-height:2.3em;display:flex;align-items:center;justify-content:center}
+.ent.unk img{filter:brightness(0) opacity(.22)}
+.ent.unk .n{color:var(--ink2)}
+.ent.sel{box-shadow:0 0 0 3px var(--rose)}
+#jdet{margin-top:12px;padding:12px 14px;background:#fffaf1;box-shadow:0 0 0 2px rgba(74,44,31,.25);font-size:16px;line-height:1.45;min-height:3em}
+#jdet b{display:block;font-size:18px;margin-bottom:4px}
+.mem{display:flex;flex-direction:column;gap:10px}
+.mem div{padding:10px 12px;background:var(--paper2);font-size:16px;line-height:1.45}
+.mem div i{font-style:normal;font-size:12px;letter-spacing:.12em;color:var(--ink2);display:block;margin-bottom:3px}
+.mem .no{color:rgba(74,44,31,.45)}
+#jfoot{display:flex;justify-content:space-between;align-items:center;padding:10px 14px 14px;gap:10px;flex-wrap:wrap}
+#jfoot small{font-size:13px;color:var(--ink2)}
+#jfoot .sm{font-size:13px;padding:6px 10px;background:var(--paper2)}
+
+/* name dialog */
+#nameDlg{position:fixed;inset:0;display:grid;place-items:center;background:rgba(10,16,40,.35);padding:16px}
+#nbox{width:min(92vw,420px);background:var(--paper);box-shadow:0 0 0 3px var(--ink),0 7px 0 3px var(--ink);padding:22px 20px;text-align:center;box-sizing:border-box}
+#nbox h3{margin:0 0 6px;font-size:24px;text-wrap:balance}
+#nbox p{margin:0 0 14px;color:var(--ink2);font-size:16px}
+#nameIn{font-family:var(--font);font-size:24px;width:100%;box-sizing:border-box;padding:10px 12px;border:0;box-shadow:inset 0 0 0 3px var(--ink);background:#fffaf1;color:var(--ink);text-align:center;outline:none;user-select:text;-webkit-user-select:text}
+#chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0 16px}
+#chips button{border:0;background:var(--paper2);padding:6px 10px;font-size:15px;box-shadow:0 0 0 2px var(--ink2)}
+#nameOk{font-size:20px;font-weight:700;padding:10px 24px;background:#cfe9ff}
+
+/* joystick & hint */
+#stick{position:fixed;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;box-shadow:inset 0 0 0 3px rgba(74,44,31,.35);background:rgba(255,244,226,.25);pointer-events:none}
+#knob{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:rgba(255,244,226,.8);box-shadow:0 0 0 3px rgba(74,44,31,.5)}
+#hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(170px + env(safe-area-inset-bottom,0px));font-size:15px;background:rgba(255,244,226,.88);padding:8px 14px;box-shadow:0 0 0 2px rgba(74,44,31,.4);text-align:center;width:max-content;max-width:88vw;line-height:1.4;pointer-events:none}
+@media (max-height:520px) and (orientation:landscape){
+  #hint{left:calc(14px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:none;max-width:min(46vw,420px);width:auto;text-align:left;font-size:14px}
+  #card{top:calc(8px + env(safe-area-inset-top,0px));width:min(52vw,440px);padding:10px 14px 9px}
+  #card .t{font-size:16px;margin-top:4px}
+  #card .s{margin-top:4px}
+  #toasts{bottom:auto;top:calc(10px + env(safe-area-inset-top,0px));width:min(40vw,340px)}
+  #title{padding-top:12px!important;gap:8px}
+  #title h1{font-size:clamp(28px,11vh,64px)}
+}
+@media (prefers-reduced-motion:reduce){.toast{animation:none}.fade{transition:none}}
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="A desert you can wander with a horse"></canvas>
+
+<div id="hud" class="fade hide">
+  <div id="nameLbl">A horse with no name</div>
+  <div id="dayLbl">Day 1 · morning</div>
+  <div id="stones" aria-label="Humming stones found"></div>
+</div>
+<div id="topR" class="fade hide">
+  <button class="px ib" id="journalBtn" aria-label="Open journal"><svg viewBox="0 0 10 10"><path fill="#4a2c1f" d="M1 1h3v1h1v-1h4v8h-4v-1h-1v1h-3z"/><path fill="#fff4e2" d="M2 2h2v1h1v5h-3zM6 2h2v6h-2v-1h-1v-4h1z"/></svg><span id="jCount">0/24</span></button>
+  <button class="px ib" id="muteBtn" aria-label="Sound on or off"><svg viewBox="0 0 10 10"><path id="noteP" fill="#4a2c1f" d="M4 1h5v6h-1v1h-2v-1h-1v-1h2v-3h-2v4h-1v1h-2v-1h-1v-1h2z"/></svg></button>
+</div>
+<div id="btmR" class="fade hide">
+  <button class="px" id="whinBtn" aria-label="Whinny"><svg viewBox="0 0 10 10"><path fill="#e0566a" d="M1 2h3v1h2v-1h3v4h-1v1h-1v1h-1v1h-2v-1h-1v-1h-1v-1h-1z"/><path fill="#fff" d="M2 3h1v1h-1z"/></svg></button>
+  <button class="px" id="actBtn">Rest</button>
+</div>
+
+<div id="toasts"></div>
+<div id="card" class="fade hide" role="status"><div class="k" id="cardK"></div><div class="t" id="cardT"></div><div class="s" id="cardS"></div></div>
+<div id="dayCard" class="fade hide"></div>
+<div id="hint" class="fade hide"></div>
+<div id="stick" class="hide"><div id="knob"></div></div>
+
+<div id="title" class="fade">
+  <h1>A Horse<small>WITH</small>No Name</h1>
+  <p>A quiet desert to wander. Nowhere to be, and no way to lose.</p>
+  <div class="row"><button class="px big" id="beginBtn">Begin</button></div>
+  <p class="note" id="titleNote">Best with sound on</p>
+</div>
+
+<div id="journal" class="fade hide" role="dialog" aria-label="Journal">
+  <div id="jbox">
+    <div id="jhead"><h2 id="jTitle">Journal</h2><button class="px ib" id="jClose" aria-label="Close journal">Close</button></div>
+    <div id="jtabs"></div>
+    <div id="jbody"></div>
+    <div id="jfoot"><small id="jHint"></small><button class="px sm" id="resetBtn">Start over</button></div>
+  </div>
+</div>
+
+<div id="nameDlg" class="fade hide" role="dialog" aria-label="Name the horse">
+  <div id="nbox">
+    <h3>The horse remembers its name</h3>
+    <p>What is it?</p>
+    <input id="nameIn" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Its name">
+    <div id="chips"></div>
+    <button class="px" id="nameOk">Remember</button>
+  </div>
+</div>
+<script src="/game.js"></script>
+</body>
+</html>
