@@ -475,6 +475,16 @@ function buildSprites() {
     else { P.ell(3, 3, 1.6, 1, '#8a6a4a'); P.line(1, 1, 3, 3, 1, '#6a4a32'); P.line(5, 1, 3, 3, 1, '#6a4a32'); }
   }, '#2a1c12'));
   SPR.wrenUp = pix(7, 6, P => { P.ell(3, 3, 1.6, 1, '#8a6a4a'); P.line(.5, 4.5, 3, 3, 1, '#6a4a32'); P.line(5.5, 4.5, 3, 3, 1, '#6a4a32'); }, '#2a1c12');
+  // M., made of light
+  SPR.mfig = [0, 1, 2, 3].map(f => pix(14, 25, P => {
+    const c = '#e8f4ff', s2 = '#b8d2f2', d = '#86a8d8';
+    P.rect(2, 4, 10, 1, d); P.rect(4, 1, 6, 3, s2); P.rect(4, 3, 6, 1, d); P.set(5, 1, c);
+    P.rect(5, 5, 4, 3, c); P.set(6, 6, d); P.set(8, 6, d);
+    P.rect(4, 8, 6, 9, s2); P.rect(5, 8, 4, 9, c); P.rect(3, 14, 8, 4, s2); P.rect(5, 8, 4, 1, '#ffd6e0');
+    if (f === 3) { P.line(9, 9, 13, 8, 1, c); P.set(13, 7, c); P.rect(3, 9, 1, 6, s2); } else { P.rect(3, 9, 1, 6, s2); P.rect(10, 9, 1, 6, s2); }
+    const k = f === 1 ? 1 : 0, k2 = f === 2 ? 1 : 0;
+    P.rect(5 - k, 18, 1, 6, d); P.rect(8 + k2, 18, 1, 6, d); P.rect(4 - k, 23, 2, 1, d); P.rect(8 + k2, 23, 2, 1, d);
+  }, '#5a78b0'));
   // ghost sea
   const ghost = (w, h, fn) => pix(w, h, fn, null);
   SPR.gfish = ghost(12, 6, P => { P.ell(5, 3, 4, 2, '#8feaff'); P.ell(5, 3, 2.8, 1, '#2a8fb8'); P.line(9, 3, 11.5, .8, 1, '#8feaff'); P.line(9, 3, 11.5, 5.2, 1, '#8feaff'); P.set(3, 2.6, '#e8ffff'); });
@@ -505,6 +515,7 @@ function buildGlows() {
   GLOW.neon = makeGlow(16, [255, 90, 110], .5);
   GLOW.lamp = makeGlow(26, [255, 230, 160], .45);
   GLOW.win = makeGlow(5, [255, 220, 150], .7);
+  GLOW.m = makeGlow(22, [190, 222, 255], .5);
 }
 
 /* ============================== world ============================== */
@@ -890,8 +901,8 @@ const ENTRIES = [
   ['things', 'spur', 'Rusty Spur', 'A rusty spur. Whoever wore it is not riding anymore.', 'Paw at sparkles in the sand.'],
   ['things', 'arrowhead', 'Arrowhead', 'Chipped from stone a long, long time ago by somebody very patient.', 'Paw at sparkles in the sand.'],
   ['things', 'horseshoe', 'Old Horseshoe', 'Somebody else\'s horse lost this. Yours looks at it thoughtfully.', 'Paw at sparkles in the sand.'],
-  ['things', 'harmonica', 'Harmonica', 'Left behind in an old wagon. It still plays, mostly in the key of lonesome.', 'Peek inside an old wagon.'],
-  ['things', 'ticket', 'Train Ticket', 'One ticket to somewhere, stamped and never used.', 'Ring the bell at an old gas station.'],
+  ['things', 'harmonica', 'Harmonica', 'Left behind in an old wagon. It still plays, mostly in the key of lonesome. Scratched into the side: M.', 'Peek inside an old wagon.'],
+  ['things', 'ticket', 'Train Ticket', 'One ticket to the Sea, stamped and never used. The name on it is smudged, but it starts with M.', 'Ring the bell at an old gas station.'],
   ['things', 'wine', 'Big Bottle of Red', 'Two snoozing cowboys, a pile of big bottles of red from somewhere called Jura, and a puddle that smells like a very good evening. They will be fine. Probably.', 'Somebody had a long night out here.'],
   ['things', 'dustdevil', 'Dust Devil', 'Ran straight through a little whirlwind. The horse looked very proud of itself.', 'Whirlwinds out on the open sand and flats.'],
   ['things', 'wish', 'A Wish', 'Caught a falling star at night. You do not have to say what you wished for.', 'Tap a shooting star at night.'],
@@ -906,6 +917,7 @@ const ENTRIES = [
   ['places', 'petroglyph', 'Rock Drawings', 'A spiral, a fish, some hands, and a horse. Someone was here long before you.', 'A big boulder near red rock and Joshua trees.'],
   ['places', 'dinobones', 'Dinosaur Bones', 'A long neck, a long tail, and a very long nap.', 'On the flats and in the dunes.'],
   ['places', 'bell', 'Mission Bell', 'An old bell on a wooden frame. Ring it and every bird nearby takes off.', 'Near the flowers.'],
+  ['places', 'rider', 'The Rider', 'Under a full moon at the whale bones, someone made of light came walking over the dunes. The horse knew them right away.', 'Some things only happen under a full moon.'],
   ['places', 'train', 'The Train', 'Comes through now and then on the old tracks. Fast, but a happy canter can keep up.', 'Follow the railroad north.']
 ];
 const ENT = {}; ENTRIES.forEach(e => ENT[e[1]] = { cat: e[0], id: e[1], name: e[2], text: e[3], hint: e[4] });
@@ -917,7 +929,7 @@ const ESPR = {
   hoodoo: () => SPR.hoodoo, mesa: () => mesaSprite(40, 12, 12, 5), petlog: () => SPR.log, desertrose: () => SPR.rose, obsidian: () => SPR.obsidian, geode: () => SPR.geode, selenite: () => SPR.selenite, lavarock: () => SPR.lavarock, cindercone: () => SPR.cindercone,
   shell: () => SPR.shell, fossilfish: () => SPR.fossil, skull: () => SPR.skull, spur: () => SPR.spur, arrowhead: () => SPR.arrowhead, horseshoe: () => SPR.horseshoe, harmonica: () => SPR.harmonica, ticket: () => SPR.ticket, wine: () => SPR.bottle, dustdevil: () => SPR.devilIcon, wish: () => SPR.starIcon,
   fly: () => pix(9, 7, P => { P.ell(4.5, 4, 1.6, 1.3, '#2a2420'); P.ell(3, 2.4, 1.4, 1, '#d8ecff'); P.ell(6, 2.4, 1.4, 1, '#d8ecff'); P.set(5.6, 3.6, '#c0392b'); }, null),
-  windmill: () => SPR.lm_windmill, ghosttown: () => SPR.lm_saloon, whale: () => SPR.lm_wskull, arch: () => archIcon(), wagon: () => SPR.lm_wagon, station: () => SPR.lm_station, mailbox: () => SPR.lm_mailbox, petroglyph: () => SPR.lm_glyph, dinobones: () => SPR.lm_dskull, bell: () => SPR.lm_bell, train: () => SPR.loco[0]
+  windmill: () => SPR.lm_windmill, ghosttown: () => SPR.lm_saloon, whale: () => SPR.lm_wskull, arch: () => archIcon(), wagon: () => SPR.lm_wagon, station: () => SPR.lm_station, mailbox: () => SPR.lm_mailbox, petroglyph: () => SPR.lm_glyph, dinobones: () => SPR.lm_dskull, bell: () => SPR.lm_bell, train: () => SPR.loco[0], rider: () => SPR.mfig[3]
 };
 
 const EIMG = {};
@@ -931,12 +943,12 @@ function entryImg(id) {
 }
 
 /* ============================== state ============================== */
-const S = { x: 0, y: 0, hour: 8.2, day: 1, found: {}, rings: [], dug: {}, name: '', river: false, fly: false, rainSeen: false, played: 0, letters: 0, mail: {}, wishes: 0, races: 0, regions: {}, curRegion: '', dist: 0, ranHerd: 0 };
+const S = { x: 0, y: 0, hour: 8.2, day: 1, found: {}, rings: [], dug: {}, name: '', river: false, fly: false, rainSeen: false, played: 0, letters: 0, mail: {}, wishes: 0, races: 0, regions: {}, curRegion: '', dist: 0, ranHerd: 0, mready: 0, mdone: 0 };
 let seen = new Set(), trail = [];
-function save() { store.set({ x: Math.round(H.x), y: Math.round(H.y), hour: S.hour, day: S.day, found: S.found, rings: RINGS.map(r => r.found), dug: S.dug, name: S.name, river: S.river, fly: S.fly, rainSeen: S.rainSeen, played: S.played, letters: S.letters, mail: S.mail, wishes: S.wishes, races: S.races, regions: S.regions, dist: Math.round(S.dist), ranHerd: S.ranHerd, seen: Array.from(seen).join(';'), trail }); }
+function save() { store.set({ x: Math.round(H.x), y: Math.round(H.y), hour: S.hour, day: S.day, found: S.found, rings: RINGS.map(r => r.found), dug: S.dug, name: S.name, river: S.river, fly: S.fly, rainSeen: S.rainSeen, played: S.played, letters: S.letters, mail: S.mail, wishes: S.wishes, races: S.races, regions: S.regions, dist: Math.round(S.dist), ranHerd: S.ranHerd, mready: S.mready, mdone: S.mdone, seen: Array.from(seen).join(';'), trail }); }
 function load() {
   const s = store.get(); if (!s) return false;
-  Object.assign(S, { hour: s.hour ?? 8.2, day: s.day || 1, found: s.found || {}, dug: s.dug || {}, name: s.name || '', river: !!s.river, fly: !!s.fly, rainSeen: !!s.rainSeen, played: s.played || 0, letters: s.letters || 0, mail: s.mail || {}, wishes: s.wishes || 0, races: s.races || 0, regions: s.regions || {}, dist: s.dist || 0, ranHerd: s.ranHerd || 0 });
+  Object.assign(S, { hour: s.hour ?? 8.2, day: s.day || 1, found: s.found || {}, dug: s.dug || {}, name: s.name || '', river: !!s.river, fly: !!s.fly, rainSeen: !!s.rainSeen, played: s.played || 0, letters: s.letters || 0, mail: s.mail || {}, wishes: s.wishes || 0, races: s.races || 0, regions: s.regions || {}, dist: s.dist || 0, ranHerd: s.ranHerd || 0, mready: s.mready || 0, mdone: s.mdone || 0 });
   if (s.seen) seen = new Set(s.seen.split(';')); if (Array.isArray(s.trail)) trail = s.trail;
   (s.rings || []).forEach((f, i) => { if (RINGS[i]) RINGS[i].found = !!f; });
   H.x = s.x || 0; H.y = s.y || 0; return true;
@@ -1055,6 +1067,7 @@ const sfx = {
   shake() { for (let i = 0; i < 6; i++) noise(.06, .07, 1100, 'bandpass', i * .06); },
   paper() { noise(.08, .08, 4000, 'highpass'); noise(.1, .06, 3000, 'highpass', .12); },
   swirl() { noise(.8, .1, 700, 'bandpass'); },
+  mSong() { let t0 = .3; for (const [f, d] of [[493.9, .55], [440, .35], [392, .55], [329.6, 1], [392, .45], [440, .45], [493.9, .7], [587.3, .45], [493.9, 1.1], [440, .55], [392, .55], [440, .45], [329.6, 1.6]]) { reed(f, d, t0); t0 += d * .92; } },
   cricket() { for (let i = 0; i < 3; i++) tone(4300, .03, 'sine', .012, null, i * .06); }
 };
 // music: slow fingerpicking over two chords, E minor and D6/9 over F#
@@ -1073,7 +1086,7 @@ const CHIME = ['B4', 'D5', 'E5', 'G4', 'A4', 'E5', 'G5'];
 const mus = { next: 0, step: 0, lvl: 0, set: 'home' };
 function musicTick() {
   if (!AC || AC.state !== 'running') return;
-  const target = mode === 'title' ? .6 : (cine ? 1 : .85) * (1 - W.rain * .35);
+  const target = mode === 'title' ? .6 : (cine ? (cine.kind === 'm' ? .3 : 1) : .85) * (1 - W.rain * .35);
   mus.lvl += (target - mus.lvl) * .05;
   const bpm = 66, e8 = 60 / bpm / 2;
   if (mus.next < AC.currentTime) mus.next = AC.currentTime + .05;
@@ -1087,7 +1100,7 @@ function musicTick() {
       pluck(chord[ni], t, (bass ? .42 : .26) * mus.lvl * rand(.85, 1.05), bass ? -.15 : (ni - 3) * .18);
     }
     if (i === 6 && (bar % 2 === 1) && R() < .45) pluck(pick(CHIMESETS[mus.set]), t + e8 * .5, .16 * mus.lvl, rand(-.6, .6));
-    if (cine && i % 2 === 0) pluck(pick(['E5', 'B5', 'G5', 'D5']), t + .03, .14, rand(-.7, .7));
+    if (cine && (cine.kind !== 'm' || cine.t > 4) && i % 2 === 0) pluck(pick(['E5', 'B5', 'G5', 'D5']), t + .03, .14, rand(-.7, .7));
     mus.next += e8; mus.step = (mus.step + 1) % 64;
   }
 }
@@ -1121,7 +1134,7 @@ function hint(txt, secs) { const el = $('hint'); el.innerHTML = txt; el.classLis
 const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 function updateHUD() {
   $('nameLbl').textContent = S.name ? S.name : 'A horse with no name';
-  $('dayLbl').textContent = 'Day ' + S.day + ' · ' + partOfDay() + (W.rain > .3 ? ' · rain' : '');
+  $('dayLbl').textContent = 'Day ' + S.day + ' · ' + partOfDay() + (W.rain > .3 ? ' · rain' : '') + (fullMoon() && nightAmt() > .5 ? ' · full moon' : '');
   const st = $('stones'); if (st.children.length !== 9) { st.innerHTML = ''; for (let i = 0; i < 9; i++) st.appendChild(document.createElement('i')); }
   RINGS.forEach((r, i) => st.children[i].classList.toggle('on', r.found));
   $('jCount').textContent = Object.keys(S.found).filter(k => ENT[k]).length + '/' + ENTRIES.length;
@@ -1269,7 +1282,7 @@ function forObjsNear(x, y, r, fn) {
   const c0 = Math.floor((x - r) / CHS), c1 = Math.floor((x + r) / CHS), r0 = Math.floor((y - r) / CHS), r1 = Math.floor((y + r) / CHS);
   for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) { const ch = getChunk(cx, cy); for (const o of ch.objs) fn(o); }
 }
-function spring() { const g = RINGS[8]; let k = 0; if (S.river) k = 1; else if (cine) k = clamp((cine.t - 3) / 4, 0, 1); if (k <= 0) return null; return { x: g.x, y: g.y + 1, rx: 13 * k, ry: 7.5 * k }; }
+function spring() { const g = RINGS[8]; let k = 0; if (S.river) k = 1; else if (cine && !cine.kind) k = clamp((cine.t - 3) / 4, 0, 1); if (k <= 0) return null; return { x: g.x, y: g.y + 1, rx: 13 * k, ry: 7.5 * k }; }
 function waterBodies(cx, cy) { const out = oasesNear(cx + LW / 2, cy + LH / 2, Math.max(LW, LH)).slice(); const sp = spring(); if (sp && sp.rx > 2) out.push(sp); return out; }
 function waterAt(x, y) {
   { const sp = spring(); if (sp && inEll(x, y, sp, -1)) return true; }
@@ -1492,12 +1505,13 @@ function updWeather(dt) {
 /* ============================== main update ============================== */
 function update(dt) {
   T += dt;
-  if (mode === 'play') { S.played += dt; S.hour += dt * (24 / 360) * (H.state === 'rest' ? 1 : 1); }
+  if (mode === 'play' && !(cine && cine.kind === 'm')) { S.played += dt; S.hour += dt * (24 / 360) * (H.state === 'rest' ? 1 : 1); }
   else S.hour += dt * .01;
   if (S.hour >= 24) S.hour -= 24;
   const pd = update.lastHour ?? S.hour; if (pd < 6 && S.hour >= 6 && mode === 'play') { S.day++; dayCard('Day ' + S.day); save(); }
   update.lastHour = S.hour;
-  if (cine) updFinale(dt);
+  if (cine) { if (cine.kind === 'm') updM(dt); else updFinale(dt); }
+  if (mode === 'play') checkM(dt);
   updHorse(dt);
   if (mode === 'play') { spawnCritters(dt); scanDiscoveries(dt); }
   updCritters(dt); updWeather(dt);
@@ -1525,7 +1539,8 @@ function update(dt) {
   for (const g of RINGS) if (g.pulse > 0) g.pulse -= dt * .3;
   // camera
   const lx = H.vx * .45, ly = H.vy * .35;
-  const tx = H.x + lx - LW / 2, ty = H.y + ly - LH / 2 - (mode === 'title' ? LH * titleOff() : 8);
+  let fx = H.x, fy = H.y; if (cine && cine.kind === 'm') { fx = (H.x + (cine.m.vis ? cine.m.x : cine.sx)) / 2; fy = (H.y + cine.meet.y) / 2 - 4; }
+  const tx = fx + lx - LW / 2, ty = fy + ly - LH / 2 - (mode === 'title' ? LH * titleOff() : 8);
   cam.x += (tx - cam.x) * Math.min(1, dt * 3); cam.y += (ty - cam.y) * Math.min(1, dt * 3);
   // timers
   if (cardTimer > 0) { cardTimer -= dt; if (cardTimer <= 0) hideCard(); }
@@ -1576,6 +1591,7 @@ function render() {
   if (train.on) for (const c of train.cars) list.push({ kind: 'car', x: c.cx, y: RAILY + 4, c });
   for (const d of devils) list.push({ kind: 'devil', x: d.x, y: d.y, d });
   list.push({ kind: 'horse', x: H.x, y: H.y });
+  if (cine && cine.kind === 'm') { if (cine.t < 32) list.push({ kind: 'harm', x: cine.sx, y: cine.sy + 1 }); }
   // ground shadows
   for (const o of list) {
     if (o.kind === 'horse') { b.fillStyle = 'rgba(90,50,30,.22)'; ellipseFill(b, H.x - cx, H.y - cy, Math.max(4, 9 - H.z * .1), 2.4); continue; }
@@ -1615,7 +1631,7 @@ function render() {
   // rain
   if (drops.length) { b.fillStyle = 'rgba(220,235,255,.55)'; for (const d of drops) { const x = Math.floor(d.x + d.t * 20), y = Math.floor(d.y + d.t * 160); b.fillRect(x, y, 1, 3); } }
   // light: multiply tint
-  let tint = tintAt(S.hour); if (W.rain > 0) tint = mixc(tint, mixc(tint, [190, 196, 214], .9), W.rain);
+  let tint = tintAt(S.hour); if (fullMoon() && night > 0) tint = mixc(tint, [150, 168, 218], night * .5); if (W.rain > 0) tint = mixc(tint, mixc(tint, [190, 196, 214], .9), W.rain);
   b.globalCompositeOperation = 'multiply'; b.fillStyle = css(tint); b.fillRect(0, 0, LW, LH); b.globalCompositeOperation = 'source-over';
   // lights
   b.globalCompositeOperation = 'lighter';
@@ -1626,6 +1642,7 @@ function render() {
     else if (g.pulse > 0 || night > .3) { b.globalAlpha = Math.max(g.pulse, night * .35); b.drawImage(GLOW.stone, x - 22, y - 28); b.globalAlpha = 1; }
   }
   if (night > .05) {
+    if (cine && cine.kind === 'm' && cine.m.vis) { b.globalAlpha = cine.m.a; b.drawImage(GLOW.m, Math.floor(cine.m.x - cx) - 22, Math.floor(cine.m.y - cy) - 34); b.globalAlpha = 1; b.globalCompositeOperation = 'source-over'; drawMFig(cx, cy); b.globalCompositeOperation = 'lighter'; }
     b.globalAlpha = night; b.drawImage(GLOW.horse, Math.floor(H.x - cx) - 40, Math.floor(H.y - cy) - 52); b.globalAlpha = 1;
     if (S.fly) { b.globalAlpha = night; b.drawImage(GLOW.fly, Math.floor(fly.x - cx) - 14, Math.floor(fly.y - cy) - 14); b.drawImage(GLOW.tiny, Math.floor(fly.x - cx) - 4, Math.floor(fly.y - cy) - 4); b.globalAlpha = 1; }
     for (const c of critters) if (c.type === 'moth') { const x = Math.floor(c.x - cx), y = Math.floor(c.y - cy - c.z); b.globalAlpha = night * (.6 + .4 * Math.sin(c.t * 5)); b.drawImage(GLOW.moth, x - 6, y - 6); b.fillStyle = '#f4ffd8'; b.fillRect(x, y, 1, 1); b.globalAlpha = 1; }
@@ -1707,6 +1724,8 @@ function drawThing(o, cx, cy, tt) {
   const at = (spr, x, y, flip) => { const dx = Math.floor(x - cx) - (spr.width >> 1), dy = Math.floor(y - cy) - spr.height + 1; if (flip) { b.save(); b.scale(-1, 1); b.drawImage(spr, -dx - spr.width, dy); b.restore(); } else b.drawImage(spr, dx, dy); };
   switch (o.kind) {
     case 'horse': return drawHorse(cx, cy);
+    case 'harm': return at(SPR.harmonica, o.x, o.y - 10);
+    case 'm': return drawMFig(cx, cy);
     case 'mesa': { const me = o.me; b.drawImage(me.spr, Math.floor(me.x - cx - me.w / 2 - 1), Math.floor(me.y - cy - me.top / 2 - 1 - me.cliff)); return; }
     case 'stone': return at(o.spr, o.x, o.y);
     case 'center': { const g = o.g; at(g.found ? SPR.centerDim : SPR.center, g.x, g.y + 1); return; }
@@ -1773,16 +1792,16 @@ function drawClouds(cx, cy, tt) {
 }
 function drawCompass(cx, cy, tt) {
   if (mode !== 'play' || cine || noCompass) return;
-  const next = RINGS.find(r => !r.found); if (!next) return;
-  if (S.played < 25 && RINGS.every(r => !r.found)) return;
+  let next = RINGS.find(r => !r.found); const mw = mWhale(), gold = !!mw; if (gold) next = mw; if (!next) return;
+  if (!gold && S.played < 25 && RINGS.every(r => !r.found)) return;
   const sx = next.x - cx, sy = next.y - cy;
   if (sx > 8 && sx < LW - 8 && sy > 8 && sy < LH - 8) return;
   const mx = LW / 2, my = LH / 2, dx = sx - mx, dy = sy - my;
   const k = Math.min((LW / 2 - 12) / Math.abs(dx || 1e-6), (LH / 2 - 14) / Math.abs(dy || 1e-6));
   const x = Math.floor(mx + dx * k), y = Math.floor(my + dy * k);
   const b = bctx, p = .6 + .4 * Math.sin(tt * 2.4);
-  b.globalCompositeOperation = 'lighter'; b.globalAlpha = .55 * p; b.drawImage(GLOW.stoneS, x - 9, y - 9); b.globalAlpha = 1; b.globalCompositeOperation = 'source-over';
-  b.fillStyle = 'rgba(232,248,255,' + (.75 + .25 * p).toFixed(2) + ')'; b.fillRect(x, y - 2, 1, 5); b.fillRect(x - 2, y, 5, 1); b.fillRect(x - 1, y - 1, 3, 3);
+  b.globalCompositeOperation = 'lighter'; b.globalAlpha = .55 * p; b.drawImage(gold ? GLOW.fly : GLOW.stoneS, x - (gold ? 14 : 9), y - (gold ? 14 : 9)); b.globalAlpha = 1; b.globalCompositeOperation = 'source-over';
+  b.fillStyle = gold ? 'rgba(255,236,170,' + (.75 + .25 * p).toFixed(2) + ')' : 'rgba(232,248,255,' + (.75 + .25 * p).toFixed(2) + ')'; b.fillRect(x, y - 2, 1, 5); b.fillRect(x - 2, y, 5, 1); b.fillRect(x - 1, y - 1, 3, 3);
 }
 
 /* ============================== surfaces, dust, prints ============================== */
@@ -2115,24 +2134,28 @@ function initMapInput() {
 
 /* ============================== postcards ============================== */
 let lastCard = null, noCompass = false;
-async function postcard() {
-  if (mode !== 'play') return;
-  audioInit(); sfx.shutter();
-  noCompass = true; render(); noCompass = false;
+async function makeCard(title, sub) {
   const k = clamp(Math.round(1080 / LW), 2, 6), pw = LW * k, ph = LH * k, pad = Math.round(Math.min(pw, ph) * .05), band = Math.round(Math.max(pw, ph) * .08 + 34);
   const c = mk(pw + pad * 2, ph + pad + band), g = c.getContext('2d'); g.imageSmoothingEnabled = false;
   g.fillStyle = '#fff6e6'; g.fillRect(0, 0, c.width, c.height);
   g.drawImage(buf, pad, pad, pw, ph);
   g.fillStyle = '#4a2c1f'; g.fillRect(pad - 3, pad - 3, pw + 6, 3); g.fillRect(pad - 3, pad + ph, pw + 6, 3); g.fillRect(pad - 3, pad, 3, ph); g.fillRect(pad + pw, pad, 3, ph);
   try { await document.fonts.load('600 32px "Pixelify Sans"'); } catch (e) {}
-  const rg = regionAt(H.x, H.y), st = Math.round(band * .78);
+  const st = Math.round(band * .78);
   g.textBaseline = 'middle'; g.fillStyle = '#4a2c1f'; g.font = '600 ' + Math.round(band * .32) + 'px "Pixelify Sans", monospace';
-  g.fillText('Greetings from ' + rg.name, pad, pad + ph + band * .4, c.width - pad * 3 - st);
+  g.fillText(title, pad, pad + ph + band * .4, c.width - pad * 3 - st);
   g.fillStyle = '#8a5f45'; g.font = Math.round(band * .21) + 'px "Pixelify Sans", monospace';
-  g.fillText('Day ' + S.day + ' · ' + (S.name ? 'with ' + S.name : 'with a horse with no name'), pad, pad + ph + band * .74, c.width - pad * 3 - st);
+  g.fillText(sub, pad, pad + ph + band * .74, c.width - pad * 3 - st);
   const sx = c.width - pad - st, sy = Math.round(pad + ph + (band - st) / 2);
   g.fillStyle = '#e9845a'; g.fillRect(sx, sy, st, st); g.fillStyle = '#fff6e6'; g.fillRect(sx + 3, sy + 3, st - 6, st - 6); g.fillStyle = '#f2c894'; g.fillRect(sx + 6, sy + 6, st - 12, st - 12);
   const hs = SPR.idle[0], f = Math.max(1, Math.floor((st - 14) / hs.width)); g.drawImage(hs, Math.round(sx + st / 2 - hs.width * f / 2), Math.round(sy + st - 7 - hs.height * f), hs.width * f, hs.height * f);
+  return c;
+}
+async function postcard() {
+  if (mode !== 'play') return;
+  audioInit(); sfx.shutter();
+  noCompass = true; render(); noCompass = false;
+  const c = await makeCard('Greetings from ' + regionAt(H.x, H.y).name, 'Day ' + S.day + ' · ' + (S.name ? 'with ' + S.name : 'with a horse with no name'));
   lastCard = c; $('pImg').src = c.toDataURL('image/png');
   const fl = $('flash'); fl.classList.add('on'); requestAnimationFrame(() => requestAnimationFrame(() => fl.classList.remove('on')));
   setTimeout(() => $('photo').classList.remove('hide'), 260);
@@ -2151,7 +2174,7 @@ const LETTERS = [
   'Whoever finds this: the water at the palm groves is sweet. Drink slow, and let the horse drink first.',
   'Day three. The horse walks a little ahead of me, like it already knows the way. I think it does.',
   'I tried to give it a name today. It looked at me like I had said something silly.',
-  'Found a seashell in the dunes. I held it to my ear and heard wind instead of waves. Out here that is the same thing.',
+  'There is a whale asleep in the sand. Once, under a full moon, I played it a song on my harmonica. It sang back.',
   'There is a camp of cowboys who sleep all day and sing all night. Lovely voices. Terrible wine.',
   'The tall stones hum when nobody is near. When you walk up they go quiet, like shy birds.',
   'It rained this morning. The whole desert opened its eyes at once.',
@@ -2169,7 +2192,7 @@ function showLetter(k, txt, sign, img) {
   const im = $('lImg'); if (img) { im.src = img.toDataURL(); im.style.display = 'block'; } else { im.removeAttribute('src'); im.style.display = 'none'; }
   $('letter').classList.remove('hide');
 }
-function closeLetter() { $('letter').classList.add('hide'); }
+function closeLetter() { const was = !$('letter').classList.contains('hide'); $('letter').classList.add('hide'); if (was) afterMLetter(); }
 function openLetter(L) {
   setState('paw'); H.stT = .5; sfx.paper();
   const st = S.mail[L.id];
@@ -2189,7 +2212,7 @@ function lmThing() {
     switch (L.type) {
       case 'windmill': if (dist(hx, hy, L.trough.x, L.trough.y) < 17) return { L, a: 'Drink' }; break;
       case 'ghosttown': if (dist(hx, hy, L.x, L.y + 4) < 17) return { L, a: 'Knock' }; break;
-      case 'whale': if (dist(hx, hy, L.x - 46, L.y + 2) < 21) return { L, a: 'Listen' }; break;
+      case 'whale': if (dist(hx, hy, L.x - 46, L.y + 2) < 21) return { L, a: fullMoon() && !S.mdone && nightAmt() > .5 && S.found.harmonica ? 'Play' : 'Listen' }; break;
       case 'wagon': if (dist(hx, hy, L.x, L.y + 6) < 23) return { L, a: 'Peek' }; break;
       case 'station': if (dist(hx, hy, L.x + 28, L.y + 8) < 17) return { L, a: 'Ding' }; break;
       case 'mailbox': if (dist(hx, hy, L.x, L.y + 2) < 16) return { L, a: 'Open' }; break;
@@ -2234,6 +2257,7 @@ function doLM(lt) {
       else toast('Ding!', pick(['Nobody comes. The bell is happy anyway.', 'A tumbleweed rolls by, like a customer.', 'Somewhere far off, a train whistles back.']), entryImg('station'));
       break;
     case 'Open': openLetter(L); break;
+    case 'Play': startM(L); break;
     case 'Look': setState('graze'); H.stT = 1.5; showLetter('Rock drawings', 'A spiral, a fish, two hands, a sun, and a horse. Someone was here long before you. The horse looks a lot like yours.', '', SPR.glyphBig); break;
     case 'Sniff': setState('graze'); H.stT = 1.6; sfx.snort(); setTimeout(() => hint('The bones smell like very old rain.', 4), 600); break;
     case 'Ring': {
@@ -2273,6 +2297,88 @@ function drawBlades(hx, hy) {
   b.fillStyle = '#4a3a30'; b.fillRect(hx - 1, hy - 1, 3, 3);
 }
 
+/* ============================== the secret: M. comes back ============================== */
+// Twelve letters, M.'s harmonica and M.'s ticket. Then every night has a full moon,
+// and if you play the harmonica at the whale bones, M. walks back over the dunes.
+const M13 = () => 'You took good care of it. I could tell by the way it walked up to me, slow, like there was nowhere else it would rather be. I never gave it a name. I think it was waiting to hear one from you.';
+const fullMoon = () => !!S.mready;
+let mCheckT = 1, mWhaleL = null, mWhaleT = 0, mCard = null, mAfter = false;
+function checkM(dt) {
+  mCheckT -= dt; if (mCheckT > 0) return; mCheckT = 1;
+  if (S.mready || cine || cardTimer > 0) return;
+  if (S.letters >= LETTERS.length && S.found.harmonica && S.found.ticket) {
+    S.mready = 1; save();
+    card('Something is different', 'You have everything M. left behind. Twelve letters, a harmonica, and a ticket. From now on, the moon comes up full.', 'M. once wrote about playing a song to a whale.', 11);
+    sfx.wish();
+  }
+}
+function mWhale() {
+  if (!fullMoon() || S.mdone || nightAmt() < .5) return null;
+  if (T - mWhaleT > 4 || !mWhaleL) { mWhaleT = T; let best = null, bd = 1e9; for (const L of lmsNear(H.x, H.y, 2600)) if (L.type === 'whale') { const d = dist(L.x, L.y, H.x, H.y); if (d < bd) { bd = d; best = L; } } mWhaleL = best; }
+  return mWhaleL;
+}
+function startM(L) {
+  const sx = L.x - 46, sy = L.y + 2;
+  cine = { kind: 'm', t: 0, lock: true, L, sx, sy, hx0: H.x, hy0: H.y, meet: { x: sx + 6, y: sy + 30 }, m: { x: L.x + 150, y: sy + 46, a: 0, f: 0, face: -1, vis: false, wk: 0 }, step: 0 };
+  H.target = null; H.vx = H.vy = 0; setState('free'); H.face = -1; H.view = 'side';
+  W.rainTarget = 0; W.rain = 0; hideCard();
+  sfx.mSong();
+}
+function walkM(m, tx, ty, sp, dt) {
+  const dx = tx - m.x, dy = ty - m.y, d = Math.hypot(dx, dy);
+  if (d > 1) { m.x += dx / d * Math.min(d, sp * dt); m.y += dy / d * Math.min(d, sp * dt); m.face = dx < 0 ? -1 : 1; m.wk += dt * 3.2; m.f = 1 + ((m.wk | 0) & 1); return false; }
+  m.f = 0; return true;
+}
+function mSay(t, secs) { card('M.', t, '', secs || 4.4); }
+function updM(dt) {
+  const c = cine, m = c.m; c.t += dt;
+  if (S.hour > 4 && S.hour < 21.5) S.hour = 22.5;
+  if (c.t < 9 && R() < dt * 5) part(c.sx + rand(-3, 3), c.sy - 14, rand(-6, 6), rand(-16, -8), 1.8, pick(['#fff2a8', '#cfeeff']), 'note');
+  if (c.t > 1.5 && c.t < 30 && ghosts.length < 12 && R() < dt * 2) spawnGhostAt(c.L.x + rand(-100, 100), c.L.y + rand(-60, 40), false);
+  if (c.step < 2 && c.t > 1.2) H.target = dist(H.x, H.y, c.meet.x, c.meet.y) > 3 ? { x: c.meet.x, y: c.meet.y } : null;
+  if (c.step === 0 && c.t > 3.5) { c.step = 1; ghosts.push({ type: 'whale', x: c.L.x - 80, y: c.L.y - 14, vx: 5.5, vy: -.5, t: 0, life: 34, school: [{ ox: 0, oy: 0, ph: 0 }], dir: 1 }); sfx.whale(); }
+  if (c.step === 1 && c.t > 7) { c.step = 2; m.vis = true; }
+  if (m.vis && c.step < 5) m.a = Math.min(1, m.a + dt * .45);
+  if (c.step === 2) { H.target = null; H.face = 1; const done = walkM(m, c.meet.x + 28, c.meet.y, 18, dt); if (done || c.t > 17) { c.step = 3; c.t3 = c.t; } }
+  if (c.step === 3) { H.target = { x: m.x - 14, y: m.y }; m.face = -1; m.f = 0; if (c.t - c.t3 > 1.8 || dist(H.x, H.y, m.x - 14, m.y) < 3) { c.step = 4; c.t4 = c.t; H.target = null; H.vx = H.vy = 0; H.face = 1; m.f = 3; sfx.whinny(1.05, 0, .12); for (let i = 0; i < 16; i++) part((H.x + m.x) / 2 + rand(-6, 6), H.y - 20, rand(-14, 14), rand(-30, -10), 1.8, pick(['#ff8fa8', '#ffd0dc', '#fff2a8']), 'heart'); mSay('There you are.'); } }
+  if (c.step === 4) {
+    const e = c.t - c.t4; H.face = 1;
+    if (e > 1.3 && !c.shot) { c.shot = 1; snapM(); }
+    if (e > 2.5 && e < 3) m.f = 0;
+    if (e > 4.8 && !c.l2) { c.l2 = 1; m.f = 3; mSay('You found somebody. I knew you would.'); }
+    if (e > 9.6 && !c.l3) { c.l3 = 1; m.f = 0; mSay(S.name ? S.name + '. That is a good name. I never could pick one.' : 'Still no name? Let them give you one. That was always theirs to do.', 5); }
+    if (e > 15) { c.step = 5; c.t5 = c.t; mSay('Go on, now. Be good to each other.', 4.6); }
+  }
+  if (c.step === 5) {
+    const e = c.t - c.t5;
+    if (e > 1.6) H.target = dist(H.x, H.y, c.hx0, c.hy0) > 4 ? { x: c.hx0, y: c.hy0 } : null;
+    if (e > 2.6) { walkM(m, c.L.x + 260, c.L.y - 100, 13, dt); m.a = Math.max(0, m.a - dt * .17); }
+    if (e > 9.5) endM();
+  }
+  if (m.vis && m.a > .1 && R() < dt * 12) part(m.x + rand(-4, 4), m.y - rand(2, 22), rand(-4, 4), rand(-10, -4), 1.2, pick(['#e4f2ff', '#b4cff0', '#ffffff']), 'spark');
+}
+function endM() {
+  cine = null; H.target = null; S.mdone = 1; save(); discover('rider');
+  setTimeout(() => { showLetter('Letter 13', M13(), '— M.'); mAfter = true; }, 700);
+}
+async function snapM() {
+  noCompass = true; render(); noCompass = false;
+  mCard = await makeCard('Greetings from the Whale Bones', 'Day ' + S.day + ' · the night M. came back');
+  try { const s = mk(Math.round(mCard.width / 2), Math.round(mCard.height / 2)), g = s.getContext('2d'); g.drawImage(mCard, 0, 0, s.width, s.height); localStorage.setItem('hwnn_mcard', s.toDataURL('image/jpeg', .85)); } catch (e) {}
+}
+function afterMLetter() {
+  if (!mAfter) return; mAfter = false; if (!mCard) return;
+  lastCard = mCard; $('pImg').src = mCard.toDataURL('image/png');
+  setTimeout(() => { $('photo').classList.remove('hide'); toast('A postcard for you', 'It is in your journal, under The Rider.', entryImg('rider')); }, 300);
+}
+function drawMFig(cx, cy) {
+  const c = cine, m = c.m, b = bctx, spr = SPR.mfig[m.f] || SPR.mfig[0];
+  const dx = Math.floor(m.x - cx) - (spr.width >> 1), dy = Math.floor(m.y - cy) - spr.height + 1;
+  b.globalAlpha = m.a * .92;
+  if (m.face < 0) { b.save(); b.scale(-1, 1); b.drawImage(spr, -dx - spr.width, dy); b.restore(); } else b.drawImage(spr, dx, dy);
+  b.globalAlpha = 1;
+}
+
 /* ============================== journal UI ============================== */
 let jTab = 'plants', jSel = null;
 const TABS = [['plants', 'Plants'], ['birds', 'Birds'], ['creatures', 'Creatures'], ['rocks', 'Rocks'], ['things', 'Things'], ['places', 'Places'], ['letters', 'Letters'], ['stones', 'Stones']];
@@ -2283,7 +2389,7 @@ function closeJournal() { $('journal').classList.add('hide'); }
 function renderJournal() {
   $('jTitle').textContent = S.name ? S.name + "'s journal" : 'Journal';
   const tabs = $('jtabs'); tabs.innerHTML = '';
-  for (const [k, l] of TABS) { const bt = document.createElement('button'); bt.textContent = l + (k === 'stones' ? ' ' + RINGS.filter(r => r.found).length + '/9' : k === 'letters' ? ' ' + S.letters + '/' + LETTERS.length : ' ' + ENTRIES.filter(e => e[0] === k && S.found[e[1]]).length + '/' + ENTRIES.filter(e => e[0] === k).length); bt.className = k === jTab ? 'on' : ''; bt.onclick = () => { jTab = k; jSel = null; renderJournal(); }; tabs.appendChild(bt); }
+  for (const [k, l] of TABS) { const bt = document.createElement('button'); bt.textContent = l + (k === 'stones' ? ' ' + RINGS.filter(r => r.found).length + '/9' : k === 'letters' ? ' ' + (S.letters + (S.mdone ? 1 : 0)) + '/' + LETTERS.length : ' ' + ENTRIES.filter(e => e[0] === k && S.found[e[1]]).length + '/' + ENTRIES.filter(e => e[0] === k).length); bt.className = k === jTab ? 'on' : ''; bt.onclick = () => { jTab = k; jSel = null; renderJournal(); }; tabs.appendChild(bt); }
   const body = $('jbody'); body.innerHTML = '';
   if (jTab === 'stones') {
     const m = document.createElement('div'); m.className = 'mem';
@@ -2295,6 +2401,7 @@ function renderJournal() {
   if (jTab === 'letters') {
     const m = document.createElement('div'); m.className = 'mem';
     for (let i = 0; i < LETTERS.length; i++) { const d = document.createElement('div'); if (i < S.letters) { d.className = 'let'; d.innerHTML = '<i>LETTER ' + (i + 1) + '</i>'; d.appendChild(document.createTextNode(LETTERS[i] + ' — M.')); } else { d.className = 'no'; d.innerHTML = '<i>LETTER ' + (i + 1) + '</i>Still waiting in a mailbox somewhere. Look for a little red flag.'; } m.appendChild(d); }
+    if (S.mdone) { const d = document.createElement('div'); d.className = 'let'; d.innerHTML = '<i>LETTER 13</i>'; d.appendChild(document.createTextNode(M13() + ' — M.')); m.appendChild(d); }
     body.appendChild(m); $('jHint').textContent = 'Letters from someone called M., left in lonely mailboxes.'; return;
   }
   const grid = document.createElement('div'); grid.className = 'grid';
@@ -2307,7 +2414,7 @@ function renderJournal() {
   }
   body.appendChild(grid);
   const det = document.createElement('div'); det.id = 'jdet';
-  if (jSel) { const e = ENT[jSel]; if (S.found[jSel]) { det.innerHTML = '<b></b><span></span>'; det.querySelector('b').textContent = e.name; det.querySelector('span').textContent = e.text; } else { det.innerHTML = '<b>Not found yet</b><span></span>'; det.querySelector('span').textContent = 'Hint: ' + e.hint; } }
+  if (jSel) { const e = ENT[jSel]; if (S.found[jSel]) { det.innerHTML = '<b></b><span></span>'; det.querySelector('b').textContent = e.name; det.querySelector('span').textContent = e.text; if (jSel === 'rider') { try { const u = localStorage.getItem('hwnn_mcard'); if (u) { const im = document.createElement('img'); im.src = u; im.alt = 'Postcard from the night M. came back'; im.style.cssText = 'display:block;width:100%;margin-top:10px;image-rendering:pixelated;box-shadow:0 0 0 2px #8a5f45'; det.appendChild(im); } } catch (er) {} } } else { det.innerHTML = '<b>Not found yet</b><span></span>'; det.querySelector('span').textContent = 'Hint: ' + e.hint; } }
   else det.textContent = 'Tap an entry to read about it.';
   body.appendChild(det);
   $('jHint').textContent = jTab === 'places' ? Object.keys(S.regions).length + ' places wandered · ' + ((S.dist || 0) / 1000).toFixed(1) + ' km · ' + (S.races || 0) + ' train races · ' + (S.wishes || 0) + ' wishes' : 'Everything you have met out here.';
@@ -2431,6 +2538,6 @@ if (had) { $('beginBtn').textContent = 'Continue'; $('titleNote').textContent = 
 cam.x = H.x - LW / 2; cam.y = H.y - LH / 2 - LH * titleOff();
 setMute(muted); updateHUD();
 if (new URLSearchParams(location.search).has('og')) { $('titleNote').style.display = 'none'; $('beginBtn').parentElement.style.display = 'none'; S.hour = +new URLSearchParams(location.search).get('og') || 17.6; }
-window.__hw = { drawMap, MV, zoomMapAt, buildMap, get mapTiles() { return mapTiles; }, get herd() { return herd; }, train, lms: (x, y, r) => lmsNear(x, y, r), regionAt, biomeAt, postcard, openMap, drawMap, makeWish, setStar: v => { star = v; }, devils, spawnHerd, seen, camps: (x, y, r) => campsNear(x, y, r), SPR, H, S, RINGS, input, update, render, begin, action, whinny, activateRing, critters, W, get mode() { return mode; }, get cine() { return cine; }, confirmName, discover, spawnGhost, set hour(v) { S.hour = v; } };
+window.__hw = { mTest: () => { S.letters = 12; S.found.harmonica = true; S.found.ticket = true; }, get mCine() { return cine; }, mWhale,  drawMap, MV, zoomMapAt, buildMap, get mapTiles() { return mapTiles; }, get herd() { return herd; }, train, lms: (x, y, r) => lmsNear(x, y, r), regionAt, biomeAt, postcard, openMap, drawMap, makeWish, setStar: v => { star = v; }, devils, spawnHerd, seen, camps: (x, y, r) => campsNear(x, y, r), SPR, H, S, RINGS, input, update, render, begin, action, whinny, activateRing, critters, W, get mode() { return mode; }, get cine() { return cine; }, confirmName, discover, spawnGhost, set hour(v) { S.hour = v; } };
 requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
 })();
