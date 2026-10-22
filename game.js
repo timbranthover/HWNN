@@ -994,10 +994,13 @@ function ksBuffer(f, dur, damp, soft) {
 }
 function makeImpulse(sec, decay) { const sr = AC.sampleRate, n = Math.floor(sr * sec), b = AC.createBuffer(2, n, sr); for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, decay); } return b; }
 function audioInit() {
-  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  if (muted) return; // sound off means silent: no audio is even started, so the phone's own music keeps playing
+  if (AC) { if (AC.state !== 'running' && !document.hidden) AC.resume().catch(() => {}); return; }
   try {
+    // mix politely with whatever else is playing on the device instead of interrupting it
+    try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) {}
     AC = new (window.AudioContext || window.webkitAudioContext)();
-    master = AC.createGain(); master.gain.value = muted ? 0 : .9; master.connect(AC.destination);
+    master = AC.createGain(); master.gain.value = .9; master.connect(AC.destination);
     const rev = AC.createConvolver(); rev.buffer = makeImpulse(2.8, 2.6); const revG = AC.createGain(); revG.gain.value = .32; rev.connect(revG); revG.connect(master);
     musicBus = AC.createGain(); musicBus.gain.value = .5; musicBus.connect(master); musicBus.connect(rev);
     sfxBus = AC.createGain(); sfxBus.gain.value = .6; sfxBus.connect(master); const sfxRev = AC.createGain(); sfxRev.gain.value = .35; sfxBus.connect(sfxRev); sfxRev.connect(rev);
@@ -1286,7 +1289,21 @@ function bendFoliage(dt) {
 const bendOff = o => { if (!o.bendAt) return 0; const k = 1 - (T - o.bendAt) / .9; if (k <= 0) return 0; return Math.round(o.bendDir * 2 * k * Math.cos((1 - k) * 11)); };
 
 setInterval(musicTick, 40);
-function setMute(m) { muted = m; store.mute(m); if (master) master.gain.value = m ? 0 : .9; $('muteBtn').style.opacity = m ? .55 : 1; $('noteP').setAttribute('fill', m ? '#a08070' : '#4a2c1f'); }
+function setMute(m) {
+  muted = m; store.mute(m);
+  for (const id of ['muteBtn', 'titleSnd']) { const b = $(id); b.classList.toggle('muted', m); b.setAttribute('aria-pressed', String(!m)); b.querySelector('.sl').textContent = m ? 'Off' : 'On'; b.setAttribute('aria-label', m ? 'Sound is off. Tap to turn sound on' : 'Sound is on. Tap to turn sound off'); }
+  if (m) { if (AC) { master.gain.setTargetAtTime(0, AC.currentTime, .05); setTimeout(() => { if (muted && AC) AC.suspend().catch(() => {}); }, 250); } }
+  else { audioInit(); if (AC) { if (AC.state !== 'running') AC.resume().catch(() => {}); master.gain.cancelScheduledValues(AC.currentTime); master.gain.setTargetAtTime(.9, AC.currentTime, .15); } }
+}
+// keep sound exactly as chosen when the app goes to the background and comes back
+// Phones can leave audio "interrupted" after the app is backgrounded, and sometimes it never resumes.
+// So: try a gentle resume when we come back, and if it still isn't running at the next touch, rebuild it fresh.
+function wakeAudio() { if (!muted && AC && AC.state !== 'running' && !document.hidden) AC.resume().catch(() => {}); }
+function rebuildAudio() { const old = AC; AC = null; padS.key = null; padS.v = null; KS = {}; try { old.close(); } catch (e) {} audioInit(); }
+function touchAudio() { if (muted || !AC || document.hidden) return; if (AC.state !== 'running') rebuildAudio(); }
+addEventListener('visibilitychange', () => { if (!AC) return; if (document.hidden) AC.suspend().catch(() => {}); else wakeAudio(); });
+addEventListener('pageshow', wakeAudio); addEventListener('focus', wakeAudio);
+for (const ev of ['pointerdown', 'touchend', 'keydown']) addEventListener(ev, touchAudio, { capture: true, passive: true });
 
 /* ============================== time & light ============================== */
 const TINT = [[0, [84, 94, 168]], [4.6, [84, 94, 168]], [5.8, [190, 155, 190]], [6.8, [255, 196, 182]], [8, [255, 240, 225]], [9.5, [255, 255, 255]], [16.5, [255, 255, 255]], [17.8, [255, 226, 190]], [18.8, [252, 190, 165]], [19.7, [170, 140, 185]], [20.8, [84, 94, 168]], [24, [84, 94, 168]]];
@@ -1511,9 +1528,9 @@ function updHorse(dt) {
   if (H.state === 'drink' && H.stT > 2.4) setState('free');
   if (H.state === 'graze' && H.stT > 3.2) setState('free');
   // speed by how long you keep going: walk, then trot, then a happy canter
-  if (mag > .15) H.holdT += dt; else H.holdT = Math.max(0, H.holdT - dt * 4);
+  if (mag > .15) H.holdT += dt * (mag > .55 ? 1.25 : 1); else H.holdT = Math.max(0, H.holdT - dt * 2.5);
   let top = input.run ? 82 : (H.holdT < 1.4 ? 30 : H.holdT < 3.4 ? 52 : 80);
-  if (mag < .8) top = Math.min(top, 30 * mag / .8 + 4);
+  if (mag < .55) top = Math.min(top, 30 * mag / .55 + 4);
   { const wasW = H.inWater; H.inWater = waterAt(H.x, H.y); if (H.inWater && !wasW && mode === 'play') { nsfx.splashIn(); for (let k = 0; k < 3; k++) parts.push({ x: H.x + rand(-3, 3), y: H.y, vx: 0, vy: 0, life: .5 + k * .2, max: .5 + k * .2, c: '#e8f4ff', kind: 'ripple', g: 0, z: 0 }); for (let k = 0; k < 6; k++) part(H.x + rand(-4, 4), H.y, rand(-20, 20), rand(-40, -18), .5, R() < .5 ? '#cfefff' : '#ffffff', 'drop', 140); } }
   if (mode === 'play') bendFoliage(dt);
   if (H.inWater) { top *= .55; H.wetT += dt; } else { if (H.wetT > .6) H.shakeIn = .35; H.wetT = 0; }
@@ -2635,8 +2652,14 @@ canvas.addEventListener('pointermove', e => {
   const dx = e.clientX - ptr.sx, dy = e.clientY - ptr.sy, d = Math.hypot(dx, dy);
   ptr.cx = e.clientX; ptr.cy = e.clientY;
   if (ptr.mouse) { if (d > 8) ptr.steer = true; return; }
-  if (!ptr.moved && d > 12) { ptr.moved = true; H.target = null; const st = $('stick'); st.style.left = ptr.sx + 'px'; st.style.top = ptr.sy + 'px'; st.classList.remove('hide'); }
-  if (ptr.moved) { const R0 = 44, k = Math.min(1, d / R0); input.x = dx / (d || 1) * k; input.y = dy / (d || 1) * k; $('knob').style.transform = 'translate(' + (dx / (d || 1) * Math.min(d, R0)) + 'px,' + (dy / (d || 1) * Math.min(d, R0)) + 'px)'; }
+  if (!ptr.moved && d > 9) { ptr.moved = true; H.target = null; const st = $('stick'); st.style.left = ptr.sx + 'px'; st.style.top = ptr.sy + 'px'; st.classList.remove('hide'); }
+  if (ptr.moved) {
+    // a short, light stick: a small nudge is enough, and the base follows your thumb so you never run out of room
+    const R0 = 30;
+    if (d > R0) { const ex = (d - R0) / d; ptr.sx += dx * ex; ptr.sy += dy * ex; const st = $('stick'); st.style.left = ptr.sx + 'px'; st.style.top = ptr.sy + 'px'; }
+    const ddx = e.clientX - ptr.sx, ddy = e.clientY - ptr.sy, dd = Math.hypot(ddx, ddy), k = clamp((dd - 3) / 19, 0, 1);
+    input.x = ddx / (dd || 1) * k; input.y = ddy / (dd || 1) * k; $('knob').style.transform = 'translate(' + ddx + 'px,' + ddy + 'px)';
+  }
 });
 function ptrEnd(e) {
   if (!ptr || e.pointerId !== ptr.id) return;
@@ -2662,7 +2685,9 @@ $('card').addEventListener('click', hideCard);
 $('journalBtn').addEventListener('click', openJournal);
 $('jClose').addEventListener('click', closeJournal);
 $('journal').addEventListener('click', e => { if (e.target === $('journal')) closeJournal(); });
-$('muteBtn').addEventListener('click', () => { audioInit(); setMute(!muted); });
+$('muteBtn').addEventListener('click', () => setMute(!muted));
+$('titleSnd').addEventListener('click', e => { e.stopPropagation(); setMute(!muted); });
+$('titleSnd').addEventListener('pointerdown', e => e.stopPropagation());
 $('nameOk').addEventListener('click', confirmName);
 $('mapBtn').addEventListener('click', () => { closeAll(); openMap(); });
 $('camBtn').addEventListener('click', postcard);
@@ -2684,7 +2709,7 @@ $('resetBtn').addEventListener('click', () => {
   store.clear(); location.reload();
 });
 $('beginBtn').addEventListener('click', e => { e.stopPropagation(); begin(); });
-$('title').addEventListener('pointerdown', e => { if (e.target.tagName !== 'BUTTON') begin(); });
+$('title').addEventListener('pointerdown', e => { if (!e.target.closest('button')) begin(); });
 
 function begin() {
   if (mode !== 'title') return;
@@ -2712,10 +2737,10 @@ function frame(now) {
 resize();
 buildSprites(); buildGlows(); placeRings();
 const had = load();
-if (had) { $('beginBtn').textContent = 'Continue'; $('titleNote').textContent = S.name ? 'With ' + S.name : 'Best with sound on'; }
+if (had) { $('beginBtn').textContent = 'Continue'; $('titleNote').textContent = S.name ? 'With ' + S.name : ''; }
 cam.x = H.x - LW / 2; cam.y = H.y - LH / 2 - LH * titleOff();
 setMute(muted); updateHUD();
-if (new URLSearchParams(location.search).has('og')) { $('titleNote').style.display = 'none'; $('beginBtn').parentElement.style.display = 'none'; S.hour = +new URLSearchParams(location.search).get('og') || 17.6; }
+if (new URLSearchParams(location.search).has('og')) { $('titleNote').style.display = 'none'; $('titleSnd').style.display = 'none'; $('beginBtn').parentElement.style.display = 'none'; S.hour = +new URLSearchParams(location.search).get('og') || 17.6; }
 window.__hw = { get AC() { return AC; }, AMB, get mus() { return mus; }, padS, HOOF, mTest: () => { S.letters = 12; S.found.harmonica = true; S.found.ticket = true; }, get mCine() { return cine; }, mWhale,  drawMap, MV, zoomMapAt, buildMap, get mapTiles() { return mapTiles; }, get herd() { return herd; }, train, lms: (x, y, r) => lmsNear(x, y, r), regionAt, biomeAt, postcard, openMap, drawMap, makeWish, setStar: v => { star = v; }, devils, spawnHerd, seen, camps: (x, y, r) => campsNear(x, y, r), SPR, H, S, RINGS, input, update, render, begin, action, whinny, activateRing, critters, W, get mode() { return mode; }, get cine() { return cine; }, confirmName, discover, spawnGhost, set hour(v) { S.hour = v; } };
 requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
 })();
