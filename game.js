@@ -1546,9 +1546,12 @@ function updHorse(dt) {
   H.x = c.x; H.y = c.y;
   const sp = Math.hypot(H.vx, H.vy);
   if (mode === 'play') S.dist += sp * dt * .2;
-  H.gait = sp < 2.5 ? 'idle' : sp < 40 ? 'walk' : sp < 64 ? 'trot' : 'canter';
-  if (Math.abs(H.vx) > 3) H.face = H.vx > 0 ? 1 : -1;
-  if (sp > 3) H.view = Math.abs(H.vy) > Math.abs(H.vx) * 1.5 ? (H.vy > 0 ? 'front' : 'back') : 'side';
+  // gait, facing and view all change with a little hysteresis, so the horse never flickers between two looks
+  { const g = H.gait, up = g === 'idle' ? 0 : g === 'walk' ? 1 : g === 'trot' ? 2 : 3, lvl = sp < (up >= 1 ? 2 : 3.5) ? 0 : sp < (up >= 2 ? 36 : 42) ? 1 : sp < (up >= 3 ? 59 : 66) ? 2 : 3;
+    H.gait = ['idle', 'walk', 'trot', 'canter'][lvl]; }
+  H.viewT = (H.viewT || 0) + dt;
+  if (Math.abs(H.vx) > (H.view === 'side' ? 5 : 3) && (H.vx > 0 ? 1 : -1) !== H.face) H.face = H.vx > 0 ? 1 : -1;
+  if (sp > 3 && H.viewT > .2) { const ax = Math.abs(H.vx), ay = Math.abs(H.vy); const nv = H.view === 'side' ? (ay > ax * 1.8 ? (H.vy > 0 ? 'front' : 'back') : 'side') : (ay < ax * 1.1 ? 'side' : (H.vy > 0 ? 'front' : 'back')); if (nv !== H.view) { H.view = nv; H.viewT = 0; } }
   const stride = { walk: 24, trot: 32, canter: 44 }[H.gait] || 24;
   if (sp > 2.5) { const before = H.anim; H.anim += sp * dt / stride; const beats = H.gait === 'walk' ? 4 : H.gait === 'trot' ? 2 : 3; if (Math.floor(before * beats) !== Math.floor(H.anim * beats)) footfall(Math.floor(H.anim * beats) % beats); }
   else H.anim += dt * .5;
@@ -1753,7 +1756,9 @@ let saveT = 4, actT = 0;
 /* ============================== render ============================== */
 let genBudget = 0;
 function render() {
-  const cx = Math.floor(cam.x), cy = Math.floor(cam.y);
+  // Lock the camera's pixel grid to the horse: the horse keeps a steady place on screen while the world
+  // scrolls under it one pixel at a time, instead of the two roundings fighting and making it shimmy.
+  const cx = Math.floor(H.x) - Math.round(H.x - cam.x), cy = Math.floor(H.y) - Math.round(H.y - cam.y);
   const b = bctx; b.imageSmoothingEnabled = false;
   // ground
   const c0 = Math.floor(cx / CHS), c1 = Math.floor((cx + LW) / CHS), r0 = Math.floor(cy / CHS), r1 = Math.floor((cy + LH) / CHS);
@@ -2726,10 +2731,12 @@ function begin() {
 }
 
 /* ============================== loop & boot ============================== */
-let last = performance.now();
+let last = performance.now(), sdt = 1 / 60;
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = (now - last) / 1000; last = now; if (dt > .1) dt = .1; if (dt <= 0) return;
+  // phones report frame times with jitter; even it out so motion is steady
+  if (dt < .05) { sdt += (dt - sdt) * .2; dt = sdt; } else sdt = dt;
   const n = Math.ceil(dt / (1 / 90)), h = dt / n;
   for (let i = 0; i < n; i++) update(h);
   render();
@@ -2741,6 +2748,6 @@ if (had) { $('beginBtn').textContent = 'Continue'; $('titleNote').textContent = 
 cam.x = H.x - LW / 2; cam.y = H.y - LH / 2 - LH * titleOff();
 setMute(muted); updateHUD();
 if (new URLSearchParams(location.search).has('og')) { $('titleNote').style.display = 'none'; $('titleSnd').style.display = 'none'; $('beginBtn').parentElement.style.display = 'none'; S.hour = +new URLSearchParams(location.search).get('og') || 17.6; }
-window.__hw = { get AC() { return AC; }, AMB, get mus() { return mus; }, padS, HOOF, mTest: () => { S.letters = 12; S.found.harmonica = true; S.found.ticket = true; }, get mCine() { return cine; }, mWhale,  drawMap, MV, zoomMapAt, buildMap, get mapTiles() { return mapTiles; }, get herd() { return herd; }, train, lms: (x, y, r) => lmsNear(x, y, r), regionAt, biomeAt, postcard, openMap, drawMap, makeWish, setStar: v => { star = v; }, devils, spawnHerd, seen, camps: (x, y, r) => campsNear(x, y, r), SPR, H, S, RINGS, input, update, render, begin, action, whinny, activateRing, critters, W, get mode() { return mode; }, get cine() { return cine; }, confirmName, discover, spawnGhost, set hour(v) { S.hour = v; } };
+window.__hw = { cam, get AC() { return AC; }, AMB, get mus() { return mus; }, padS, HOOF, mTest: () => { S.letters = 12; S.found.harmonica = true; S.found.ticket = true; }, get mCine() { return cine; }, mWhale,  drawMap, MV, zoomMapAt, buildMap, get mapTiles() { return mapTiles; }, get herd() { return herd; }, train, lms: (x, y, r) => lmsNear(x, y, r), regionAt, biomeAt, postcard, openMap, drawMap, makeWish, setStar: v => { star = v; }, devils, spawnHerd, seen, camps: (x, y, r) => campsNear(x, y, r), SPR, H, S, RINGS, input, update, render, begin, action, whinny, activateRing, critters, W, get mode() { return mode; }, get cine() { return cine; }, confirmName, discover, spawnGhost, set hour(v) { S.hour = v; } };
 requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
 })();
