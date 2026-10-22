@@ -66,7 +66,17 @@ function pix(w, h, draw, outline) {
 /* ============================== the horse ============================== */
 const HP = { o: '#4a2616', b: '#cf8048', s: '#a65d31', h: '#eba66a', m: '#5c3423', mh: '#81503a', mu: '#f1c9a0', w: '#fff6e8', e: '#2a1810', hf: '#55403a', bl: '#f59a8c', sock: '#fbefdc' };
 const HB = 26; // hoof row inside horse sprites
-function horseSide(pose, p, blink) {
+// a little pink bow, for Susanna's horse
+const BOW = { k: '#f7709f', l: '#ffc2d9', n: '#c9417a' };
+function bow(P, x, y, flut) {
+  x = Math.round(x); y = Math.round(y);
+  P.set(x - 2, y - 1, BOW.k); P.set(x - 1, y - 1, BOW.l); P.set(x - 2, y, BOW.k); P.set(x - 1, y, BOW.k);
+  P.set(x + 1, y - 1, BOW.l); P.set(x + 2, y - 1, BOW.k); P.set(x + 1, y, BOW.k); P.set(x + 2, y, BOW.k);
+  P.set(x, y, BOW.n);
+  if (flut) { P.set(x - 2, y + 1, BOW.n); P.set(x + 1, y + 1, BOW.k); P.set(x + 2, y + 2, BOW.k); }
+  else { P.set(x - 1, y + 1, BOW.k); P.set(x - 1, y + 2, BOW.n); P.set(x + 1, y + 1, BOW.k); P.set(x + 1, y + 2, BOW.n); }
+}
+function horseSide(pose, p, blink, plain) {
   return pix(34, 29, P => {
     const T = TAU;
     let bob = 0;
@@ -125,6 +135,7 @@ function horseSide(pose, p, blink) {
     // mane
     for (let k = 0; k < 6; k++) { const t = k / 5; const x = lerp(hx - 2.6, 17.5, t), y = lerp(hy - 3, BY - 4.2, t); const wv = Math.sin(T * p * (still ? 1 : 2) + k) * (still ? .4 : .9); P.dot(x - .6, y + wv * .5, k < 2 ? 3 : 2, k % 2 ? HP.mh : HP.m); }
     P.dot(hx + .6, hy - 3.6, 2, HP.m);
+    if (!plain) bow(P, hx - 3, hy - 4, (pose === 'trot' || pose === 'canter') && Math.sin(T * p * 2) > 0);
   }, HP.o);
 }
 function horseFront(p, blink, moving) {
@@ -146,6 +157,7 @@ function horseFront(p, blink, moving) {
     P.set(6, hy + 2, HP.bl); P.set(16, hy + 2, HP.bl);
     P.set(11, hy - 2, HP.w); P.set(11, hy - 1, HP.w); P.set(11, hy, HP.w);
     P.dot(11, hy - 3.8, 3, HP.m); P.dot(6.6, hy + 5.5, 2, HP.m); P.dot(15.4, hy + 5.5, 2, HP.m);
+    bow(P, 12.5, hy - 5, moving && p >= .5);
   }, HP.o);
 }
 function horseBack(p, moving) {
@@ -161,6 +173,7 @@ function horseBack(p, moving) {
     P.rect(13.5, 19 - lift(0), 3, 7, HP.b); P.rect(13.5, 26 - lift(0), 3, 1, HP.hf);
     const sw = Math.sin(T * p * (moving ? 2 : 1)) * 1.6;
     for (let i = 0; i <= 7; i++) { const t = i / 7; P.dot(11 + sw * t, 13 - bob + t * 9, t < .7 ? 3 : 2, i % 3 === 1 ? HP.mh : HP.m); }
+    bow(P, 11, 3.5 - bob, moving && p >= .5);
   }, HP.o);
 }
 
@@ -187,6 +200,10 @@ function buildSprites() {
   SPR.idle = []; SPR.idleB = []; SPR.walk = []; SPR.trot = []; SPR.canter = []; SPR.graze = []; SPR.paw = [];
   for (let i = 0; i < 8; i++) { const p = i / 8; SPR.idle.push(horseSide('idle', p, false)); SPR.idleB.push(horseSide('idle', p, true)); SPR.walk.push(horseSide('walk', p)); SPR.trot.push(horseSide('trot', p)); SPR.canter.push(horseSide('canter', p)); }
   for (let i = 0; i < 4; i++) { SPR.graze.push(horseSide('graze', i / 4)); }
+  SPR.plain = { walk: [], trot: [], canter: [], idle: [], graze: [] };
+  for (let i = 0; i < 8; i++) { const p = i / 8; for (const k of ['walk', 'trot', 'canter']) SPR.plain[k].push(horseSide(k, p, false, true)); }
+  SPR.plain.idle = [horseSide('idle', 0, false, true), horseSide('idle', .5, false, true)];
+  for (let i = 0; i < 4; i++) SPR.plain.graze.push(horseSide('graze', i / 4, false, true));
   for (let i = 0; i < 6; i++) SPR.paw.push(horseSide('paw', i / 6));
   SPR.rest = [horseSide('rest', 0), horseSide('rest', .75)];
   SPR.hop = horseSide('hop', 0);
@@ -404,6 +421,23 @@ function buildSprites() {
     for (let a = 0; a < 14; a++) { const t = a * .55, r = .4 + a * .24; P.set(7 + Math.cos(t) * r, 9 + Math.sin(t) * r, cv); }
     P.rect(13, 8, 4, 1, cv); P.set(13, 9, cv); P.set(16, 9, cv); P.set(17, 7, cv); P.set(18, 6, cv); P.set(12, 7, cv);
     P.rect(19, 12, 3, 1, cv); P.set(18, 11, cv); P.set(18, 13, cv); P.set(22, 11, cv); P.set(22, 13, cv);
+  }, '#4a2618');
+  // T + S, carved in a heart on a rock not far from where you start
+  const HEART7 = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
+  SPR.lm_carve = pix(24, 18, P => {
+    P.ell(12, 10, 11, 7.4, '#b98062'); P.ell(10.5, 8.5, 8.4, 4.8, '#cc9472');
+    P.map((x, y) => { const n = vnoise(x / 4, y / 4, 41); if (n < .28) return '#8a5440'; if (y >= 15) return '#946048'; });
+    HEART7.forEach((r, y) => [...r].forEach((ch, x) => { if (ch !== '#') return; const edge = !(HEART7[y - 1] && HEART7[y - 1][x] === '#' && HEART7[y + 1] && HEART7[y + 1][x] === '#' && r[x - 1] === '#' && r[x + 1] === '#'); P.set(9 + x, 5 + y, edge ? '#f8e2c8' : '#e8a2a4'); }));
+    P.set(20, 14, '#ff8fb8'); P.set(19, 13, '#ff8fb8'); P.set(21, 13, '#ff8fb8'); P.set(20, 13, '#ffe27a'); P.set(20, 15, '#7fae7a');
+  }, '#5a3424');
+  SPR.carveBig = pix(96, 64, P => {
+    P.ell(48, 34, 46, 29, '#a86c4e'); P.ell(44, 30, 38, 22, '#bf8460');
+    P.map((x, y) => { const n = vnoise(x / 7, y / 7, 42); if (n < .28) return '#7c4630'; if (n > .78) return '#d2976e'; });
+    const cv = '#f8e2c8', ins = (x, y) => { const X = (x - 48) / 21, Y = -(y - 31) / 19; const q = X * X + Y * Y - 1; return q * q * q - X * X * Y * Y * Y <= 0; };
+    for (let y = 6; y < 58; y++) for (let x = 20; x < 76; x++) if (ins(x, y)) { const e = !ins(x - 2, y) || !ins(x + 2, y) || !ins(x, y - 2) || !ins(x, y + 2); P.set(x, y, e ? cv : (vnoise(x / 3, y / 3, 43) < .55 ? '#e49a9c' : '#d98a8e')); }
+    const F = { T: ['###', '.#.', '.#.', '.#.', '.#.'], '+': ['...', '.#.', '###', '.#.', '...'], S: ['.##', '#..', '.#.', '..#', '##.'] };
+    [['T', 34], ['+', 44], ['S', 54]].forEach(([ch, ox]) => F[ch].forEach((r, y) => [...r].forEach((c, x) => { if (c === '#') P.rect(ox + x * 2, 23 + y * 2, 2, 2, cv); })));
+    for (const [x, y] of [[74, 52], [79, 50], [76, 47]]) { P.dot(x, y, 2, '#ff8fb8'); P.set(x, y, '#ffe27a'); P.line(x, y + 1, x - 1, y + 5, 1, '#7fae7a'); }
   }, '#4a2618');
   SPR.glyphBig = pix(96, 64, P => {
     P.ell(48, 34, 46, 29, '#9a5a3c'); P.ell(44, 30, 38, 22, '#b0724e');
@@ -656,7 +690,7 @@ const LCELL = 600, lmCache = new Map(), LM_FIXED = [];
 const LMT = {
   windmill: { b: [0, 1, 2, 5, 6], rad: 36 }, ghosttown: { b: [1, 3, 5, 0], rad: 84 }, whale: { b: [0, 7, 3], rad: 62 }, arch: { b: [4, 8, 5], rad: 40 },
   wagon: { b: [0, 1, 2, 3, 5, 6], rad: 30 }, station: { b: [1, 3, 5, 0], rad: 50 }, mailbox: { b: null, rad: 12 }, petroglyph: { b: [4, 5, 8, 1], rad: 16 },
-  dinobones: { b: [3, 7, 0, 4], rad: 46 }, bell: { b: [2, 6, 1, 5], rad: 22 }
+  dinobones: { b: [3, 7, 0, 4], rad: 46 }, bell: { b: [2, 6, 1, 5], rad: 22 }, carving: { b: [], rad: 16 }
 };
 function lmOk(x, y, rad) {
   if (inRiverBed(x, y, rad * .7 + 30) || nearRail(y, rad * .6 + 40)) return false;
@@ -682,10 +716,11 @@ function makeLM(type, x, y, id) {
     case 'petroglyph': add('lm_glyph', 0, 0); break;
     case 'dinobones': add('lm_dskull', 34, 1); break;
     case 'bell': add('lm_bell', 0, 0); break;
+    case 'carving': add('lm_carve', 0, 0); break;
   }
   return L;
 }
-LM_FIXED.push(makeLM('mailbox', -78, -112, 'F1'), makeLM('windmill', 236, 52, 'F2'));
+LM_FIXED.push(makeLM('mailbox', -78, -112, 'F1'), makeLM('windmill', 236, 52, 'F2'), makeLM('carving', -190, 120, 'F3'));
 function lmPick(gx, gy, t) {
   const x = gx * LCELL + 110 + hash(gx, gy, 92 + t * 3) * (LCELL - 220), y = gy * LCELL + 110 + hash(gx, gy, 93 + t * 3) * (LCELL - 220);
   const b = biomeAt(x, y), cands = Object.keys(LMT).filter(n => !LMT[n].b || LMT[n].b.includes(b));
@@ -706,7 +741,7 @@ function lmCell(gx, gy) {
   lmCache.set(k, out); return out;
 }
 function lmsNear(x, y, r) { const out = []; const x0 = Math.floor((x - r) / LCELL), x1 = Math.floor((x + r) / LCELL), y0 = Math.floor((y - r) / LCELL), y1 = Math.floor((y + r) / LCELL); for (let gy = y0; gy <= y1; gy++) for (let gx = x0; gx <= x1; gx++) { const c = lmCell(gx, gy); for (const L of c) out.push(L); } return out; }
-const LM_ICON = { windmill: 'lm_windmill', ghosttown: 'lm_saloon', whale: 'lm_wskull', wagon: 'lm_wagon', station: 'lm_sign', mailbox: 'lm_mailbox', petroglyph: 'lm_glyph', dinobones: 'lm_dskull', bell: 'lm_bell' };
+const LM_ICON = { windmill: 'lm_windmill', ghosttown: 'lm_saloon', whale: 'lm_wskull', wagon: 'lm_wagon', station: 'lm_sign', mailbox: 'lm_mailbox', petroglyph: 'lm_glyph', dinobones: 'lm_dskull', bell: 'lm_bell', carving: 'lm_carve' };
 function archIcon() { if (SPR.archIcon) return SPR.archIcon; const c = mk(70, 52), g = c.getContext('2d'); g.drawImage(SPR.lm_archL, 0, 16); g.drawImage(SPR.lm_archR, 52, 16); g.drawImage(SPR.lm_archTop, 0, 0); return SPR.archIcon = c; }
 const lmIcon = t => t === 'arch' ? archIcon() : SPR[LM_ICON[t]];
 function blocked(x, y, pad) {
@@ -731,7 +766,7 @@ const DEF = {
   lm_windmill: { r: 4, sh: 7 }, lm_tank: { r: 8, sh: 11 }, lm_saloon: { box: [21, 12] }, lm_store: { box: [21, 12] }, lm_hotel: { box: [21, 12] }, lm_barrel: { r: 3, sh: 4 },
   lm_wskull: { r: 8, sh: 10 }, lm_ribB: { r: 0 }, lm_ribF: { r: 0 }, lm_wtail: { r: 3 }, lm_archL: { r: 6, sh: 8 }, lm_archR: { r: 6, sh: 8 },
   lm_wagon: { box: [17, 7] }, lm_wheel: { r: 0 }, lm_station: { box: [20, 12] }, lm_pump: { r: 3, sh: 3 }, lm_sign: { r: 2, sh: 3 },
-  lm_mailbox: { r: 2, sh: 3 }, lm_glyph: { r: 9, sh: 11 }, lm_dskull: { r: 4, sh: 5 }, lm_bell: { box: [12, 3] }, cowboyA: { r: 7, sh: 12 }, cowboyB: { r: 6, sh: 9 }, bottle: { r: 1.5, sh: 2 }, bottleS: { r: 0 }, guitar: { r: 0 }, tuft: { r: 0 }, dig: { r: 0 }, palm: { r: 3, disc: 'palm', sh: 8 }, reed: { r: 0 }
+  lm_mailbox: { r: 2, sh: 3 }, lm_glyph: { r: 9, sh: 11 }, lm_carve: { r: 8, sh: 10 }, lm_dskull: { r: 4, sh: 5 }, lm_bell: { box: [12, 3] }, cowboyA: { r: 7, sh: 12 }, cowboyB: { r: 6, sh: 9 }, bottle: { r: 1.5, sh: 2 }, bottleS: { r: 0 }, guitar: { r: 0 }, tuft: { r: 0 }, dig: { r: 0 }, palm: { r: 3, disc: 'palm', sh: 8 }, reed: { r: 0 }
 };
 const TABLE = [
   [['tuft', .3], ['sage', .16], ['shell', .12], ['skull', .07], ['barrel', .1], ['dig', .14], ['saguaro', .06]],
@@ -906,6 +941,8 @@ const ENTRIES = [
   ['things', 'wine', 'Big Bottle of Red', 'Two snoozing cowboys, a pile of big bottles of red from somewhere called Jura, and a puddle that smells like a very good evening. They will be fine. Probably.', 'Somebody had a long night out here.'],
   ['things', 'dustdevil', 'Dust Devil', 'Ran straight through a little whirlwind. The horse looked very proud of itself.', 'Whirlwinds out on the open sand and flats.'],
   ['things', 'wish', 'A Wish', 'Caught a falling star at night. You do not have to say what you wished for.', 'Tap a shooting star at night.'],
+  ['things', 'heartcloud', 'Heart-shaped Cloud', 'A cloud came out shaped like a heart and drifted right over you. Probably on purpose.', 'Watch the cloud shadows. Some days one is shaped funny.'],
+  ['things', 'serenade', 'Oh! Susanna', 'Strummed a sleeping cowboy\'s guitar until he sang the old one about Susanna, eyes still closed, every word only slightly wrong.', 'Strum a snoozing cowboy\'s guitar a few times.'],
   ['things', 'fly', 'A Fly', 'A fly has decided you are its horse now. It hums along wherever you go, and glows a little at night.', 'Keep wandering.'],
   ['places', 'windmill', 'Old Windmill', 'Still turning for nobody. The trough underneath is full of cool water.', 'Out in the scrub and dunes.'],
   ['places', 'ghosttown', 'Ghost Town', 'A saloon, a store, and a hotel with no guests. Knock on the saloon and the piano plays.', 'Somewhere on the flats.'],
@@ -917,6 +954,7 @@ const ENTRIES = [
   ['places', 'petroglyph', 'Rock Drawings', 'A spiral, a fish, some hands, and a horse. Someone was here long before you.', 'A big boulder near red rock and Joshua trees.'],
   ['places', 'dinobones', 'Dinosaur Bones', 'A long neck, a long tail, and a very long nap.', 'On the flats and in the dunes.'],
   ['places', 'bell', 'Mission Bell', 'An old bell on a wooden frame. Ring it and every bird nearby takes off.', 'Near the flowers.'],
+  ['places', 'tands', 'T + S', 'A heart carved in a rock with two letters inside. Whoever they are, they were happy here.', 'Not far from where you started.'],
   ['places', 'rider', 'The Rider', 'Under a full moon at the whale bones, someone made of light came walking over the dunes. The horse knew them right away.', 'Some things only happen under a full moon.'],
   ['places', 'train', 'The Train', 'Comes through now and then on the old tracks. Fast, but a happy canter can keep up.', 'Follow the railroad north.']
 ];
@@ -928,6 +966,8 @@ const ESPR = {
   wildhorses: () => herdSet(2).walk[2], coyote: () => SPR.coyote[1], bighorn: () => SPR.bighorn[0], jackrabbit: () => SPR.rabbit[0], lizard: () => SPR.lizard[0], scorpion: () => SPR.scorp[0], tortoise: () => SPR.tortoise[0],
   hoodoo: () => SPR.hoodoo, mesa: () => mesaSprite(40, 12, 12, 5), petlog: () => SPR.log, desertrose: () => SPR.rose, obsidian: () => SPR.obsidian, geode: () => SPR.geode, selenite: () => SPR.selenite, lavarock: () => SPR.lavarock, cindercone: () => SPR.cindercone,
   shell: () => SPR.shell, fossilfish: () => SPR.fossil, skull: () => SPR.skull, spur: () => SPR.spur, arrowhead: () => SPR.arrowhead, horseshoe: () => SPR.horseshoe, harmonica: () => SPR.harmonica, ticket: () => SPR.ticket, wine: () => SPR.bottle, dustdevil: () => SPR.devilIcon, wish: () => SPR.starIcon,
+  tands: () => SPR.lm_carve, serenade: () => SPR.guitar,
+  heartcloud: () => pix(13, 12, P => { ['.###.###.', '#########', '#########', '#########', '.#######.', '..#####..', '...###...', '....#....'].forEach((r, y) => [...r].forEach((c, x) => { if (c === '#') P.set(2 + x, 2 + y, y < 2 && x > 1 && x < 4 ? '#ffffff' : '#f6dbe6'); })); }, '#c79aae'),
   fly: () => pix(9, 7, P => { P.ell(4.5, 4, 1.6, 1.3, '#2a2420'); P.ell(3, 2.4, 1.4, 1, '#d8ecff'); P.ell(6, 2.4, 1.4, 1, '#d8ecff'); P.set(5.6, 3.6, '#c0392b'); }, null),
   windmill: () => SPR.lm_windmill, ghosttown: () => SPR.lm_saloon, whale: () => SPR.lm_wskull, arch: () => archIcon(), wagon: () => SPR.lm_wagon, station: () => SPR.lm_station, mailbox: () => SPR.lm_mailbox, petroglyph: () => SPR.lm_glyph, dinobones: () => SPR.lm_dskull, bell: () => SPR.lm_bell, train: () => SPR.loco[0], rider: () => SPR.mfig[3]
 };
@@ -957,7 +997,13 @@ function load() {
 const H = { x: 0, y: 0, vx: 0, vy: 0, face: 1, view: 'side', anim: 0, holdT: 0, idleT: 0, state: 'free', stT: 0, z: 0, vz: 0, blinkT: 2, blink: 0, tp: 0, target: null, inWater: false, gait: 'idle', stepAcc: 0, grazeCD: 6, biome: 1, wetT: 0, shakeIn: 0, shakeT: 0 };
 const input = { x: 0, y: 0, run: false, keys: new Set() };
 let cam = { x: 0, y: 0 }, mode = 'title', cine = null, T = 0;
-const W = { rain: 0, rainTarget: 0, rainT: 0, nextRain: 140, bloom: 0, rainbow: 0, wind: 1, clouds: [] };
+const W = { rain: 0, rainTarget: 0, rainT: 0, nextRain: 140, bloom: 0, rainbow: 0, wind: 1, clouds: [], hc: null, hcT: 70 };
+let HC = null;
+function heartCloud() {
+  if (HC) return HC; const w = 78, h = 66, m = mk(w, h), g = m.getContext('2d'), id = g.createImageData(w, h), mask = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const X = (x - w / 2) / 32, Y = -(y - h * .44) / 28; const q = X * X + Y * Y - 1; const v = -(q * q * q - X * X * Y * Y * Y) - (vnoise(x / 8, y / 8, 77) - .5) * .05; if (v > 0) { mask[y * w + x] = 1; const o = (y * w + x) * 4; id.data[o] = 214; id.data[o + 1] = 128; id.data[o + 2] = 158; id.data[o + 3] = 255; } }
+  g.putImageData(id, 0, 0); return HC = { m, w, h, mask };
+}
 const critters = [], parts = [], prints = [], drops = [], ghosts = [];
 let fly = { x: 0, y: 0, vx: 0, vy: 0, t: 0, buzzT: 4 };
 let tumbles = [];
@@ -1560,7 +1606,7 @@ function updHorse(dt) {
   H.blinkT -= dt; if (H.blinkT < 0) { H.blink = .14; H.blinkT = rand(2, 5); } if (H.blink > 0) H.blink -= dt;
   H.tp += dt * (H.gait === 'idle' ? .35 : 1);
   if (H.state === 'hop') { H.vz -= 380 * dt; H.z += H.vz * dt; if (H.z <= 0) { H.z = 0; setState('free'); dust(H.x, H.y, 4, 0); } }
-  if (H.state === 'rest' && mode === 'play') S.hour += dt * .9;
+  if (H.state === 'rest' && mode === 'play') { S.hour += dt * .9; H.dreamT = (H.dreamT || 0) - dt; if (H.dreamT < 0) { H.dreamT = rand(1.3, 2); H.dreams = (H.dreams || 0) + 1; const hx = H.x + H.face * 9, hy = H.y - 16; if (H.dreams % 4 === 0) part(hx, hy, H.face * 3, -7, 2.2, '#ff9fbd', 'heart'); else part(hx, hy, H.face * 4, -9, 1.8, '#fff8ea', 'z'); } }
 }
 function whinny() {
   audioInit(); if (H.state === 'rest') setState('free');
@@ -1578,12 +1624,21 @@ function action() {
   else if (a === 'Paw') { const d = nearestDig(); if (d) { setState('paw'); H.face = d.x > H.x ? 1 : -1; H.view = 'side'; sfx.paw(); setTimeout(() => dig(d), 650); } }
   else if (a === 'Nudge' || a === 'Strum' || a === 'Sniff') {
     const cs = campThing(); if (!cs) return; H.view = 'side';
-    if (a === 'Strum') { setState('paw'); sfx.strum(cs.cp.said & 1); cs.cp.said++; for (let i = 0; i < 5; i++) part(cs.it.x + rand(-4, 4), cs.it.y - 6, rand(-8, 8), rand(-20, -10), 1.2, '#fff2a8', 'note'); if (cs.cp.said === 2) setTimeout(() => toast('One cowboy mumbles', '"Play the one about the horse."', entryImg('wine')), 900); }
+    if (a === 'Strum') { setState('paw'); sfx.strum(cs.cp.said & 1); cs.cp.said++; for (let i = 0; i < 5; i++) part(cs.it.x + rand(-4, 4), cs.it.y - 6, rand(-8, 8), rand(-20, -10), 1.2, '#fff2a8', 'note'); if (cs.cp.said === 2) setTimeout(() => toast('One cowboy mumbles', '"Play the one about the horse."', entryImg('wine')), 900); if (cs.cp.said === 4) setTimeout(() => serenade(cs), 1200); }
     else if (a === 'Sniff') { setState('graze'); H.stT = 2; sfx.snort(); setTimeout(() => { sfx.snort(); hint('The horse sniffs the wine, sneezes, and decides against it.', 4); }, 700); }
     else { setState('graze'); H.stT = 2.2; sfx.snort(); toast('A cowboy mumbles', pick(MUMBLES), entryImg('wine')); for (let i = 0; i < 3; i++) part(cs.it.x, cs.it.y - 12, rand(-4, 6), rand(-14, -8), 1.8, '#fff8ea', 'z'); }
   }
   else if (a === 'Rest') { setState('rest'); H.vx = H.vy = 0; if (!S.restHinted) { S.restHinted = 1; hint('Resting lets time drift by. Move to get up.', 4); } }
   else if (a === 'Get up') setState('free');
+}
+function serenade(cs) {
+  // "Oh! Susanna" (Stephen Foster, 1848), hummed by a cowboy who is still asleep
+  const C = 261.6, D = 293.7, E = 329.6, F = 349.2, G = 392, A = 440, q = .26;
+  const tune = [[F, 1], [F, 1], [A, 1], [A, 2], [G, 1], [G, 1], [E, 1], [C, 1], [D, 3], [0, 1], [C, 1], [D, 1], [E, 1], [G, 1], [G, 1], [A, 1], [G, 1], [E, 1], [C, 1.5], [D, .5], [E, 1], [E, 1], [D, 1], [D, 1], [C, 3]];
+  let t0 = 0; for (const [f, n] of tune) { if (f) reed(f, q * n * .95, t0); t0 += q * n; }
+  toast('A cowboy sings in his sleep', '"Oh, Susanna, oh don\'t you cry for me..."', entryImg('wine'));
+  const it = cs.it; let k = 0; const iv = setInterval(() => { part(it.x + rand(-4, 4), it.y - 14, rand(-6, 8), rand(-20, -10), 1.6, k % 3 ? '#fff2a8' : '#ffc2d9', k % 4 === 3 ? 'heart' : 'note'); if (++k > 18) clearInterval(iv); }, 300);
+  setTimeout(() => discover('serenade'), t0 * 1000 + 300);
 }
 function campThing() {
   const hx = H.x + H.face * 8;
@@ -1596,7 +1651,7 @@ function campThing() {
   }
   return null;
 }
-const MUMBLES = ['"Five more minutes, Ma."', '"Mmf. Tell the horse I said howdy."', '"Is it still Tuesday?"', '"Who drank all the... oh. Me."', '"Nice horse. Real nice. Goodnight."', '"Play the one about the horse."'];
+const MUMBLES = ['"Five more minutes, Ma."', '"Mmf. Tell the horse I said howdy."', '"Is it still Tuesday?"', '"Who drank all the... oh. Me."', '"Nice horse. Real nice. Goodnight."', '"Play the one about the horse."', '"Tell Susanna the Jura one is for her."', '"Susanna... pretty name. Pretty horse, too."'];
 function nearestDig() { let best = null, bd = 18; forObjsNear(H.x, H.y, 24, o => { if (o.kind === 'dig') { const d = dist(o.x, o.y, H.x + H.face * 6, H.y); if (d < bd) { bd = d; best = o; } } }); return best; }
 function currentAction() {
   if (cine) return '';
@@ -1690,6 +1745,11 @@ function confirmName() {
 
 /* ============================== weather ============================== */
 function updWeather(dt) {
+  // now and then a heart-shaped cloud drifts over
+  if (mode === 'play' && !cine) {
+    if (!W.hc) { W.hcT -= dt; if (W.hcT < 0 && W.rain < .2) { W.hcT = rand(160, 300); W.hc = { x: H.x - LW / 2 - 90, y: H.y + rand(-40, 10), hit: false }; } }
+    else { const hc = heartCloud(), c = W.hc; c.x += 9 * W.wind * dt; const lx = Math.floor(H.x - c.x), ly = Math.floor(H.y - c.y); if (!c.hit && lx >= 0 && ly >= 0 && lx < hc.w && ly < hc.h && hc.mask[ly * hc.w + lx]) { c.hit = true; discover('heartcloud'); } if (c.x > H.x + LW) W.hc = null; }
+  }
   if (mode !== 'play') return;
   W.nextRain -= dt;
   if (W.rainTarget === 0 && W.nextRain <= 0 && !cine) { W.rainTarget = 1; W.rainT = rand(45, 70); S.rainSeen = true; hint('It is raining. Something in the desert has been waiting for this.', 6); }
@@ -1992,6 +2052,7 @@ function drawClouds(cx, cy, tt) {
   b.globalCompositeOperation = 'multiply'; b.globalAlpha = .13 + W.rain * .2;
   const span = 900, spanY = 700;
   for (const c of W.clouds) { const x = ((c.ox + tt * 7 * W.wind - cx) % span + span) % span - 200, y = ((c.oy + tt * 1.5 - cy) % spanY + spanY) % spanY - 150; b.drawImage(c.m, Math.floor(x), Math.floor(y)); }
+  if (W.hc) { const hc = heartCloud(); b.globalAlpha = .3; b.drawImage(hc.m, Math.floor(W.hc.x - cx), Math.floor(W.hc.y - cy)); }
   b.globalAlpha = 1; b.globalCompositeOperation = 'source-over';
 }
 function drawCompass(cx, cy, tt) {
@@ -2057,7 +2118,7 @@ function herdSet(ci) {
   const co = COATS[ci], map = new Map();
   for (const k of ['b', 's', 'h', 'm', 'mh', 'mu', 'sock', 'o']) if (co[k]) { const src = hexc(HP[k]); map.set(src[0] << 16 | src[1] << 8 | src[2], { c: hexc(co[k]), body: k === 'b' || k === 's' || k === 'h' }); }
   const rc = a => a.map(s => recolor(s, map, co.pinto));
-  return herdCache[ci] = { walk: rc(SPR.walk), trot: rc(SPR.trot), canter: rc(SPR.canter), idle: rc([SPR.idle[0], SPR.idle[4]]), graze: rc(SPR.graze) };
+  return herdCache[ci] = { walk: rc(SPR.plain.walk), trot: rc(SPR.plain.trot), canter: rc(SPR.plain.canter), idle: rc(SPR.plain.idle), graze: rc(SPR.plain.graze) };
 }
 let herd = null, herdCD = 45, herdSndT = 0;
 const SLOTS = [[-22, -15], [-24, 15], [-44, 0], [6, -22], [6, 22], [-62, -12]];
@@ -2388,7 +2449,7 @@ const EMPTYMAIL = ['Nothing inside but a pressed desert flower.', 'Empty, except
 const PIANO_LINES = ['Nobody home. Just the old piano, playing itself.', 'The piano plays a little faster this time.', 'Somebody upstairs laughs. Then it is quiet.', 'The swinging doors creak. The piano keeps going.'];
 const WAGON_LINES = ['An old quilt and a tin of beans.', 'A map of somewhere that is not here.', 'A sleeping lizard. Shh.', 'A cracked mirror. The horse looks very handsome in it.'];
 function showLetter(k, txt, sign, img) {
-  $('lK').textContent = k; $('lT').textContent = txt; $('lS').textContent = sign || '';
+  $('lK').textContent = k; $('lT').textContent = txt; $('lS').textContent = sign || ''; $('lOk').textContent = img ? 'Close' : 'Put it back'; $('lImg').alt = k;
   const im = $('lImg'); if (img) { im.src = img.toDataURL(); im.style.display = 'block'; } else { im.removeAttribute('src'); im.style.display = 'none'; }
   $('letter').classList.remove('hide');
 }
@@ -2419,6 +2480,7 @@ function lmThing() {
       case 'petroglyph': if (dist(hx, hy, L.x, L.y + 2) < 21) return { L, a: 'Look' }; break;
       case 'dinobones': if (dist(hx, hy, L.x + 34, L.y + 2) < 17) return { L, a: 'Sniff' }; break;
       case 'bell': if (dist(hx, hy, L.x, L.y + 5) < 18) return { L, a: 'Ring' }; break;
+      case 'carving': if (dist(hx, hy, L.x, L.y + 3) < 22) return { L, a: 'Look' }; break;
     }
   }
   return null;
@@ -2431,6 +2493,7 @@ function burstFlock(c) {
 }
 function doLM(lt) {
   const L = lt.L; H.view = 'side';
+  if (L.type === 'carving') { setState('graze'); H.stT = 1.5; showLetter('Carved in the rock', 'A heart, and two letters inside it: T + S. It looks like it has been here forever, and also like somebody did it this morning. The horse stands a little closer to it.', '', SPR.carveBig); discover('tands'); for (let i = 0; i < 10; i++) part(L.x + rand(-8, 8), L.y - 10, rand(-14, 14), rand(-26, -8), 1.4, pick(['#ff8fa8', '#ffd0dc', '#fff2a8']), 'heart'); return; }
   switch (lt.a) {
     case 'Drink': setState('drink'); sfx.drink(); H.face = L.trough.x > H.x ? 1 : -1; break;
     case 'Knock': {
