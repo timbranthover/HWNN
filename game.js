@@ -1089,6 +1089,7 @@ function musicTick() {
   if (!AC || AC.state !== 'running') return;
   const target = mode === 'title' ? .6 : (cine ? (cine.kind === 'm' ? .3 : 1) : .85) * (1 - W.rain * .35);
   mus.lvl += (target - mus.lvl) * .05;
+  padTick(muted ? 0 : .055 * mus.lvl * clamp(1 - mus.en * 2.4, 0, 1));
   const enT = mode !== 'play' || cine ? .6 : ({ idle: .05, walk: .55, trot: .75, canter: 1 })[H.gait] ?? .3; mus.en += (enT - mus.en) * .012;
   const bpm = 66, e8 = 60 / bpm / 2;
   if (mus.next < AC.currentTime) mus.next = AC.currentTime + .05;
@@ -1098,7 +1099,6 @@ function musicTick() {
     const night = nightAmt();
     const t = mus.next + rand(-.008, .012);
     const sparse = mus.en < .3 && !(i === 0 || i === 3 || (i === 6 && R() < .5));
-    if (i === 0 && (bar & 1) === 0 && mus.en < .45) pad([chord[0], chord[2], chord[4]], t, e8 * 15, .016 * mus.lvl * (1 - mus.en * 1.6));
     if (!sparse && !(night > .6 && (i === 3 || i === 7) && R() < .5) && !(mus.set === 'ash' && PATTERN[i] > 1 && R() < .35)) {
       const ni = PATTERN[i], bass = ni < 2;
       pluck(chord[ni], t, (bass ? .42 : .26) * mus.lvl * rand(.85, 1.05) * (.8 + mus.en * .25), bass ? -.15 : (ni - 3) * .18);
@@ -1171,7 +1171,7 @@ function soundInit(rev) {
   const comp = AC.createDynamicsCompressor(); comp.threshold.value = -20; comp.knee.value = 18; comp.ratio.value = 3; comp.attack.value = .02; comp.release.value = .3;
   master.disconnect(); master.connect(comp); comp.connect(AC.destination);
   musLP = bq('lowpass', 6000, .5); musicBus.disconnect(); musicBus.connect(musLP); musLP.connect(master); musicBus.connect(rev);
-  padLP = bq('lowpass', 900, .4); padLP.connect(musicBus);
+  padLP = bq('lowpass', 1100, .3); padLP.connect(musicBus);
 }
 function playHoof(surf, gait, vol, pan, t0) {
   if (!AC || !HOOF[surf]) return;
@@ -1200,10 +1200,26 @@ const nsfx = {
   breath(k) { if (!AC) return; const t = AC.currentTime, s = AC.createBufferSource(); s.buffer = PINK; const f = bq('bandpass', 520 * k, 1.1), g = AC.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.05, t + .05); g.gain.exponentialRampToValueAtTime(.0001, t + .26); s.connect(f); f.connect(g); g.connect(sfxBus); s.start(t, Math.random() * 4); s.stop(t + .3); },
   rustle(pan, v) { if (!AC) return; const t = AC.currentTime, s = AC.createBufferSource(); s.buffer = PINK; const f = bq('bandpass', rand(1800, 2800), .9), g = AC.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.03 * (v || 1), t + .04); g.gain.exponentialRampToValueAtTime(.0001, t + .22); let node = g; if (AC.createStereoPanner) { const p = AC.createStereoPanner(); p.pan.value = pan; g.connect(p); node = p; } s.connect(f); f.connect(g); node.connect(sfxBus); s.start(t, Math.random() * 4); s.stop(t + .25); },
   splashIn() { playHoof('water', 'walk', .5); noise(.35, .06, 1800, 'highpass', .03); },
-  nicker() { if (!AC) return; for (let i = 0; i < 3; i++) { ptone(118 - i * 6, .14, .05, 0, 96, i * .13, 'triangle'); noise(.12, .03, 420, 'bandpass', i * .13); } }
+  nicker() { if (!AC) return; const t = AC.currentTime, s = AC.createBufferSource(); s.buffer = PINK; const f = bq('bandpass', 380, 1.4), g = AC.createGain(), am = AC.createGain(), l = AC.createOscillator(); l.frequency.value = 9; const lg = AC.createGain(); lg.gain.value = .5; l.connect(lg); lg.connect(am.gain); am.gain.value = .5; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.035, t + .12); g.gain.exponentialRampToValueAtTime(.0001, t + .7); s.connect(f); f.connect(am); am.connect(g); g.connect(sfxBus); s.start(t, Math.random() * 4); l.start(t); s.stop(t + .75); l.stop(t + .75); }
 };
-function pad(notes, t, dur, v) {
-  for (const nn of notes) { const f = NOTE[nn]; if (!f) continue; for (const det of [-5, 5]) { const o = AC.createOscillator(); o.type = 'triangle'; o.frequency.value = f; o.detune.value = det; const g = AC.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(v, t + dur * .4); g.gain.linearRampToValueAtTime(.0001, t + dur * 1.08); o.connect(g); g.connect(padLP); o.start(t); o.stop(t + dur * 1.12); } }
+// A soft, steady warmth under the music while you rest. It never re-attacks: one gentle chord that
+// fades in when you stop, fades out when you move, and slowly crossfades when the region's music changes.
+const padS = { key: null, g: null };
+function padVoice(notes) {
+  const g = AC.createGain(); g.gain.value = 0; g.connect(padLP); const oscs = [];
+  notes.forEach((nn, k) => { let f = NOTE[nn]; if (!f) return; while (f < 230) f *= 2;
+    for (const [m, a] of [[1, 1], [2, .12]]) { const o = AC.createOscillator(); o.type = 'sine'; o.frequency.value = f * m; const og = AC.createGain(); og.gain.value = a / notes.length;
+      if (AC.createStereoPanner) { const pn = AC.createStereoPanner(); pn.pan.value = (k - 1) * .3; o.connect(og); og.connect(pn); pn.connect(g); } else { o.connect(og); og.connect(g); }
+      o.start(); oscs.push(o); } });
+  return { g, oscs };
+}
+function padTick(level) {
+  if (!AC || !padLP) return; const now = AC.currentTime, key = mus.set;
+  if (padS.key !== key) {
+    if (padS.v) { const old = padS.v; old.g.gain.cancelScheduledValues(now); old.g.gain.setTargetAtTime(0, now, 1.6); setTimeout(() => old.oscs.forEach(o => { try { o.stop(); } catch (e) {} }), 9000); }
+    const ch = CHORDSETS[key][0]; padS.v = padVoice([ch[0], ch[2], ch[4] || ch[3]]); padS.key = key;
+  }
+  padS.v.g.gain.setTargetAtTime(level, now, 2.2);
 }
 function waterDist() {
   let best = 999;
@@ -2700,6 +2716,6 @@ if (had) { $('beginBtn').textContent = 'Continue'; $('titleNote').textContent = 
 cam.x = H.x - LW / 2; cam.y = H.y - LH / 2 - LH * titleOff();
 setMute(muted); updateHUD();
 if (new URLSearchParams(location.search).has('og')) { $('titleNote').style.display = 'none'; $('beginBtn').parentElement.style.display = 'none'; S.hour = +new URLSearchParams(location.search).get('og') || 17.6; }
-window.__hw = { get AC() { return AC; }, AMB, get mus() { return mus; }, HOOF, mTest: () => { S.letters = 12; S.found.harmonica = true; S.found.ticket = true; }, get mCine() { return cine; }, mWhale,  drawMap, MV, zoomMapAt, buildMap, get mapTiles() { return mapTiles; }, get herd() { return herd; }, train, lms: (x, y, r) => lmsNear(x, y, r), regionAt, biomeAt, postcard, openMap, drawMap, makeWish, setStar: v => { star = v; }, devils, spawnHerd, seen, camps: (x, y, r) => campsNear(x, y, r), SPR, H, S, RINGS, input, update, render, begin, action, whinny, activateRing, critters, W, get mode() { return mode; }, get cine() { return cine; }, confirmName, discover, spawnGhost, set hour(v) { S.hour = v; } };
+window.__hw = { get AC() { return AC; }, AMB, get mus() { return mus; }, padS, HOOF, mTest: () => { S.letters = 12; S.found.harmonica = true; S.found.ticket = true; }, get mCine() { return cine; }, mWhale,  drawMap, MV, zoomMapAt, buildMap, get mapTiles() { return mapTiles; }, get herd() { return herd; }, train, lms: (x, y, r) => lmsNear(x, y, r), regionAt, biomeAt, postcard, openMap, drawMap, makeWish, setStar: v => { star = v; }, devils, spawnHerd, seen, camps: (x, y, r) => campsNear(x, y, r), SPR, H, S, RINGS, input, update, render, begin, action, whinny, activateRing, critters, W, get mode() { return mode; }, get cine() { return cine; }, confirmName, discover, spawnGhost, set hour(v) { S.hour = v; } };
 requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
 })();
