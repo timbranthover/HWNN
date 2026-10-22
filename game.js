@@ -279,6 +279,202 @@ function buildSprites() {
     P.line(10, 4.5, 17, 4.5, 2, '#6a4426'); P.rect(17, 3, 3, 3, '#4a2c18'); P.set(18, 2.5, '#e8d8b0'); P.set(18, 6.5, '#e8d8b0');
     P.line(2, 4.5, 17, 4.5, 1, '#f2e6c8'); P.set(3, 2, '#f0c27a');
   }, '#3a2010');
+  // ---------- tiny pixel font for signs ----------
+  const FONT = { A: '010101111101101', S: '011100010001110', L: '100100100100111', O: '010101101101010', N: '101111111101101', G: '011100101101011', E: '111100110100111', R: '110101110101101', H: '101101111101101', T: '111010010010010', P: '110101110100100' };
+  const word = (P, s, x, y, c) => { for (const ch of s) { const gl = FONT[ch]; if (gl) for (let i = 0; i < 15; i++) if (gl[i] === '1') P.set(x + (i % 3), y + ((i / 3) | 0), c); x += 4; } };
+  // ---------- new plants & rocks ----------
+  SPR.joshua = [0, 1].map(v => pix(24, 32, P => {
+    const tr = '#8a7a5a', td = '#5e5240';
+    P.line(12, 31, 12, 16, 3, 2, tr);
+    const arms = v ? [[12, 17, 5, 8], [12, 19, 19, 6], [12, 22, 17, 15]] : [[12, 16, 6, 6], [12, 18, 18, 9]];
+    for (const [x0, y0, x1, y1] of arms) P.line(x0, y0, x1, y1, 2, tr);
+    P.map((x, y, c) => { if (c === tr && (x + y * 3) % 4 === 0) return td; });
+    const tips = arms.map(a => [a[2], a[3]]).concat([[12, 14]]);
+    for (const [cx, cy] of tips) { for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; P.line(cx, cy, cx + Math.cos(a) * 3.4, cy + Math.sin(a) * 2.8, 1, k % 3 ? '#7a9a52' : '#a8c070'); } P.dot(cx, cy, 2, '#4e6a36'); }
+  }, '#3a3424'));
+  SPR.yucca = pix(15, 24, P => {
+    P.line(7.5, 17, 7.5, 3, 1, '#9a8a5a');
+    for (let y = 3; y < 10; y += 2) { P.set(6.5, y, '#fbf6e8'); P.set(8.5, y + 1, '#fbf6e8'); P.set(7.5, y - 1, '#ffffff'); }
+    for (let k = 0; k < 11; k++) { const a = Math.PI * (1.05 + k / 10 * .9); P.line(7.5, 21, 7.5 + Math.cos(a) * 7, 21 + Math.sin(a) * 6, 1, k % 2 ? '#86a85a' : '#a8c47a'); }
+    P.dot(7.5, 21, 3, '#5e7a3e');
+  }, '#3a4a28');
+  SPR.poppy = pix(13, 8, P => {
+    for (let i = 0; i < 6; i++) P.line(2 + i * 1.8, 7, 2 + i * 1.8 + (i - 2.5) * .4, 4, 1, '#6a9a4a');
+    for (const [x, y] of [[3, 3], [7, 2], [10, 4], [5, 5]]) { P.dot(x, y, 2, '#f28a2e'); P.set(x - .5, y - .5, '#ffc05a'); }
+  }, null);
+  SPR.lupine = pix(11, 12, P => {
+    for (const [x, h] of [[2.5, 8], [5.5, 10], [8.5, 7]]) { P.line(x, 11, x, 11 - h, 1, '#6a9a4a'); for (let y = 11 - h; y < 11 - h + h * .6; y++) { P.set(x, y, (y & 1) ? '#8a6ad0' : '#b49cf0'); P.set(x - 1, y + 1, '#7a5ac0'); P.set(x + 1, y, '#9a7ae0'); } }
+  }, null);
+  SPR.lily = pix(10, 10, P => {
+    for (let i = 0; i < 4; i++) P.line(2 + i * 2, 9, 1 + i * 2.6, 4, 1, '#7aa85a');
+    for (const [x, y] of [[3, 3], [6.5, 2], [5, 5]]) { P.dot(x, y, 2, '#fff8f0'); P.set(x, y + 1, '#f4e2c8'); P.set(x - .5, y - .5, '#ffe27a'); }
+  }, null);
+  SPR.selenite = pix(11, 12, P => {
+    const pr = (x, y, h, w) => { P.rect(x, y - h, w, h, '#dceaf4'); P.rect(x, y - h, 1, h, '#ffffff'); P.rect(x + w - 1, y - h, 1, h, '#b4cadc'); P.set(x + (w >> 1), y - h - 1, '#eef6fc'); };
+    pr(2, 11, 6, 3); pr(5, 11, 9, 3); pr(8, 11, 5, 2);
+  }, '#6a7e92');
+  SPR.lavarock = pix(16, 12, P => {
+    P.ell(8, 7, 6.6, 4.4, '#3c3236'); P.ell(7, 6, 4.6, 2.8, '#54464a');
+    P.map((x, y) => { const hh = hash(x, y, 71); if (hh < .12) return '#221a1e'; if (hh > .93) return '#7a3e32'; if (y >= 9) return '#2e262a'; });
+  }, '#140e10');
+  SPR.cindercone = pix(46, 26, P => {
+    for (let y = 5; y <= 22; y++) { const t = (y - 5) / 17, hw = 6 + 16 * Math.pow(t, .8); for (let x = Math.round(23 - hw); x <= Math.round(23 + hw); x++) { const rel = (x - 23) / hw; let c = rel < -.35 ? '#6e4e48' : rel > .4 ? '#3a2a2e' : '#54403e'; if (hash(x, y, 72) < .08) c = '#8a4434'; if (((x * 3 + y * 5) % 11) === 0) c = '#2e2226'; P.set(x, y, c); } }
+    P.ell(23, 22, 22, 3, '#4a3638');
+    P.ell(23, 5.5, 6.5, 2.2, '#7a5450'); P.ell(23, 5.5, 4.5, 1.3, '#1e1416');
+  }, '#120a0c');
+  // ---------- small treasures ----------
+  SPR.arrowhead = pix(9, 12, P => { for (let y = 1; y < 9; y++) { const hw = (y - 1) * .45; for (let x = Math.round(4.5 - hw); x <= Math.round(4.5 + hw); x++) P.set(x, y, (x + y) % 3 ? '#5a5a66' : '#7a7a88'); } P.rect(3, 9, 3, 2, '#5a5a66'); P.set(4, 2, '#b8b8c8'); }, '#22222a');
+  SPR.horseshoe = pix(12, 12, P => { P.ell(6, 5.5, 4.8, 4.8, '#9a7a5a'); P.ell(6, 5.5, 2.6, 2.6, null); P.rect(4, 6, 5, 6, null); P.set(2, 4, '#5a4432'); P.set(10, 4, '#5a4432'); P.set(2, 7, '#5a4432'); P.set(10, 7, '#5a4432'); P.set(4, 1, '#c8a47a'); }, '#3a2a1c');
+  SPR.harmonica = pix(15, 7, P => { P.rect(1, 1, 13, 5, '#c8ccd4'); P.rect(1, 1, 13, 1, '#eef0f4'); P.rect(1, 3, 13, 1, '#7a5a3a'); for (let x = 2; x < 13; x += 2) P.set(x, 3, '#2a1a10'); P.rect(1, 5, 13, 1, '#8a8e96'); }, '#3a3a44');
+  SPR.ticket = pix(14, 9, P => { P.rect(1, 1, 12, 7, '#f4e6c4'); P.rect(1, 1, 3, 7, '#d8402c'); P.rect(6, 3, 6, 1, '#8a6a4a'); P.rect(6, 5, 4, 1, '#8a6a4a'); P.set(2, 3, '#f4e6c4'); P.set(2, 5, '#f4e6c4'); }, '#5a3a24');
+  SPR.devilIcon = pix(12, 14, P => { for (let k = 0; k < 18; k++) { const a = k * .9, h = k * .7, r = 1 + k * .26; P.set(6 + Math.cos(a) * r, 12 - h + Math.sin(a) * r * .3, k & 1 ? '#e8c494' : '#c9a070'); } }, null);
+  SPR.starIcon = pix(11, 11, P => { P.line(5.5, 0, 5.5, 10, 1, '#ffe27a'); P.line(0, 5.5, 10, 5.5, 1, '#ffe27a'); P.line(2, 2, 9, 9, 1, '#fff2b0'); P.line(9, 2, 2, 9, 1, '#fff2b0'); P.dot(5.5, 5.5, 3, '#fff8d8'); }, null);
+  // ---------- landmarks ----------
+  SPR.lm_windmill = pix(26, 56, P => {
+    const w1 = '#8a6a4a', w2 = '#6a4e36';
+    P.line(4, 55, 11, 12, 2, w1); P.line(22, 55, 15, 12, 2, w1);
+    for (let y = 18; y < 54; y += 9) { const t1 = (y - 12) / 43, t2 = Math.min(1, (y + 9 - 12) / 43); const xl1 = 11 - 7 * t1, xr1 = 15 + 7 * t1, xl2 = 11 - 7 * t2, xr2 = 15 + 7 * t2; P.line(xl1, y, xr2, Math.min(55, y + 9), 1, w2); P.line(xr1, y, xl2, Math.min(55, y + 9), 1, w2); P.line(xl1, y, xr1, y, 1, w1); }
+    P.rect(9, 10, 8, 2, '#5a4030'); P.line(13, 10, 13, 6, 1, '#4a3a30');
+  }, '#3a2a1c');
+  SPR.lm_tank = pix(24, 28, P => {
+    P.rect(4, 19, 2, 8, '#5a4030'); P.rect(18, 19, 2, 8, '#5a4030'); P.rect(11, 19, 2, 8, '#4a3428');
+    P.rect(2, 6, 20, 14, '#9a6a42'); for (let x = 3; x < 22; x += 3) P.rect(x, 6, 1, 14, '#845832'); P.rect(2, 6, 2, 14, '#b4825a');
+    for (const y of [8, 13, 18]) P.rect(2, y, 20, 1, '#4a3a30');
+    P.ell(12, 5.5, 10, 2.6, '#7a5232'); P.ell(12, 5, 8, 1.6, '#5a3a22');
+  }, '#2a1c14');
+  const building = (txt, wall, wallD, trim, tall) => pix(42, 40, P => {
+    const top = tall ? 1 : 5;
+    P.rect(4, top, 34, 20 - top, wall); for (let y = top + 2; y < 20; y += 3) P.rect(4, y, 34, 1, wallD);
+    P.rect(4, top, 34, 1, trim); P.rect(3, top + 1, 1, 3, trim); P.rect(38, top + 1, 1, 3, trim);
+    const sw = txt.length * 4 + 3, sx = 21 - (sw >> 1);
+    P.rect(sx, top + 3, sw, 8, '#4a2e22'); P.rect(sx + 1, top + 4, sw - 2, 6, '#e8d2a8'); word(P, txt, sx + 2, top + 5, '#5a2e1e');
+    P.rect(2, 18, 38, 20, wall); for (let y = 20; y < 38; y += 3) P.rect(2, y, 38, 1, wallD);
+    P.rect(2, 18, 38, 1, wallD);
+    P.rect(0, 20, 42, 2, '#5a3a28'); P.rect(0, 22, 42, 1, '#3a2418'); P.rect(1, 22, 2, 16, '#6a4a32'); P.rect(39, 22, 2, 16, '#6a4a32');
+    P.rect(6, 26, 7, 6, '#2a2028'); P.rect(6, 26, 7, 1, trim); P.rect(9, 26, 1, 6, '#4a3a40');
+    P.rect(29, 26, 7, 6, '#2a2028'); P.rect(29, 26, 7, 1, trim); P.rect(32, 26, 1, 6, '#4a3a40');
+    P.rect(17, 25, 8, 13, '#2a1a14');
+    if (tall) { P.rect(8, top + 12, 5, 4, '#2a2028'); P.rect(29, top + 12, 5, 4, '#2a2028'); }
+    P.rect(2, 37, 38, 1, '#5a3a28');
+  }, '#2a1a10');
+  SPR.lm_saloon = building('SALOON', '#b07a4c', '#946038', '#e8c890', false);
+  { const g2 = SPR.lm_saloon.getContext('2d'); g2.fillStyle = '#d8a86a'; g2.fillRect(17, 28, 3, 6); g2.fillRect(22, 28, 3, 6); g2.fillStyle = '#8a5a30'; g2.fillRect(17, 28, 3, 1); g2.fillRect(22, 28, 3, 1); }
+  SPR.lm_store = building('GENERAL', '#9a8a6a', '#7e7056', '#e8dcc0', false);
+  SPR.lm_hotel = building('HOTEL', '#a8604a', '#8a4a38', '#f0c8a0', true);
+  SPR.lm_barrel = pix(9, 11, P => { P.ell(4.5, 6, 3.8, 4.6, '#9a6a42'); P.rect(1, 3, 7, 1, '#4a3a30'); P.rect(1, 8, 7, 1, '#4a3a30'); P.rect(2, 2, 1, 8, '#b4825a'); P.ell(4.5, 1.6, 3, 1, '#6a4a2e'); }, '#2a1c14');
+  const bone = '#ece2cc', boneD = '#cbbd9e', boneL = '#fffaf0';
+  SPR.lm_wskull = pix(30, 16, P => {
+    P.ell(13, 8, 12, 5.6, bone); P.ell(12, 7, 9, 3.4, boneL); P.ell(24, 10, 5.5, 3.6, bone);
+    P.ell(8, 8, 2.4, 1.8, '#5a4a38'); P.line(3, 11, 27, 12, 1, boneD);
+    P.map((x, y) => { if (y >= 13) return '#e2c08c'; });
+  }, '#6e604a');
+  SPR.lm_ribB = pix(7, 20, P => { for (let i = 0; i <= 12; i++) { const t = i / 12; P.dot(1.5 + Math.sin(t * 2.2) * 3.5, 19 - t * 17, 2, t > .8 ? boneD : bone); } }, '#6e604a');
+  SPR.lm_ribF = pix(7, 22, P => { for (let i = 0; i <= 12; i++) { const t = i / 12; P.dot(5.5 - Math.sin(t * 2.2) * 3.5, 21 - t * 19, 2, t > .8 ? boneL : bone); } }, '#6e604a');
+  SPR.lm_wtail = pix(16, 9, P => { P.line(1, 5, 7, 5, 2, bone); P.line(7, 5, 14, 1, 2, 1, bone); P.line(7, 5, 14, 8, 2, 1, bone); }, '#6e604a');
+  const ss = '#d98a5e', ssD = '#b86a44', ssL = '#eaa47a';
+  SPR.lm_archL = pix(18, 36, P => { for (let y = 0; y < 36; y++) { const hw = 6 + Math.max(0, y - 26) * .35 + Math.sin(y * .7) * .5, x0 = Math.round(9 - hw), x1 = Math.round(9 + hw); for (let x = x0; x <= x1; x++) P.set(x, y, x - x0 < 3 ? ssL : x1 - x < 3 ? ssD : (y % 6 === 4 ? ssD : ss)); } P.ell(9, 34, 8.4, 2.2, ssD); }, '#6a3424');
+  SPR.lm_archR = SPR.lm_archL;
+  SPR.lm_archTop = pix(70, 20, P => { for (let x = 0; x < 70; x++) { const s = Math.sin(Math.PI * x / 69); const yo = Math.round(4 - 3 * s), yi = Math.round(19 - 11 * s); for (let y = yo; y <= yi; y++) { let c = ss; if (y - yo < 2) c = ssL; else if (yi - y < 2) c = ssD; else if (y % 5 === 0) c = ssD; P.set(x, y, c); } } }, '#6a3424');
+  SPR.lm_wagon = pix(40, 28, P => {
+    P.line(0, 21, 8, 19, 1, '#6a4a32');
+    P.rect(5, 14, 30, 6, '#8a5a36'); P.rect(5, 14, 30, 1, '#a87448'); for (let x = 8; x < 35; x += 5) P.rect(x, 15, 1, 5, '#6a4228');
+    for (let x = 6; x <= 34; x++) { const t = (x - 6) / 28; const hh = Math.round(Math.sin(t * Math.PI) * 4 + 8); for (let y = 14 - hh; y < 14; y++) P.set(x, y, (x % 6 === 0) ? '#d8ccb4' : '#f2ead8'); }
+    P.ell(22, 8, 2.4, 2, '#3a2a20');
+    const wh = (cx, cy, r) => { for (let a = 0; a < 18; a++) { const t = a / 18 * TAU; P.set(cx + Math.cos(t) * r, cy + Math.sin(t) * r, '#4a3428'); } for (let a = 0; a < 4; a++) { const t = a / 4 * Math.PI; P.line(cx - Math.cos(t) * r, cy - Math.sin(t) * r, cx + Math.cos(t) * r, cy + Math.sin(t) * r, 1, '#6a4a32'); } P.set(cx, cy, '#2a1c14'); };
+    wh(10, 22, 4.5); P.rect(28, 20, 6, 6, '#7a5232');
+  }, '#2a1c14');
+  SPR.lm_wheel = pix(15, 8, P => { P.ell(7.5, 4, 6.4, 2.8, '#4a3428'); P.ell(7.5, 4, 4.8, 1.7, null); P.line(2, 4, 13, 4, 1, '#6a4a32'); P.line(7.5, 1.5, 7.5, 6.5, 1, '#6a4a32'); P.set(7.5, 4, '#2a1c14'); }, '#2a1c14');
+  SPR.lm_station = pix(40, 32, P => {
+    P.rect(2, 10, 36, 21, '#e8e0d0'); P.rect(2, 10, 36, 1, '#fff8ec'); for (let y = 13; y < 31; y += 4) P.rect(2, y, 36, 1, '#d6ccba');
+    P.rect(0, 6, 40, 4, '#c8402c'); for (let x = 0; x < 40; x += 4) P.rect(x, 6, 2, 4, '#f4ece0');
+    P.rect(0, 10, 40, 1, '#8a2a1e');
+    P.rect(5, 0, 15, 7, '#3a2a30'); word(P, 'EAT', 7, 1, '#ff6a5a');
+    P.rect(6, 15, 9, 7, '#5a7a8a'); P.rect(6, 15, 9, 1, '#9ab8c8'); P.rect(10, 15, 1, 7, '#e8e0d0');
+    P.rect(24, 15, 7, 16, '#6a4a3a'); P.set(29, 23, '#e8c060');
+    P.rect(2, 30, 36, 1, '#8a8278');
+  }, '#3a2a28');
+  SPR.lm_pump = pix(9, 18, P => { P.rect(1, 5, 7, 12, '#d8402c'); P.rect(1, 5, 2, 12, '#f06a50'); P.rect(2, 8, 5, 3, '#f4ece0'); P.ell(4.5, 2.5, 3, 2.4, '#fff4e0'); P.rect(0, 16, 9, 2, '#6a6058'); P.line(8, 10, 8, 14, 1, '#2a2a2a'); }, '#3a1a14');
+  SPR.lm_sign = pix(15, 32, P => { P.rect(6, 10, 2, 22, '#6a5a52'); P.rect(0, 0, 15, 10, '#2a2030'); P.rect(1, 1, 13, 8, '#3a2e40'); word(P, 'GAS', 2, 3, '#ff5a6a'); }, '#140e18');
+  const mbox = up => pix(10, 15, P => { P.rect(4, 6, 2, 9, '#7a5a3a'); P.rect(1, 2, 7, 5, '#9aa4ae'); P.ell(4.5, 2.5, 3.5, 1.5, '#b8c2cc'); P.rect(1, 5, 7, 2, '#7a848e'); P.rect(0, 3, 1, 4, '#5a646e'); if (up) { P.rect(8, 0, 1, 5, '#e0392c'); P.rect(9, 0, 1, 2, '#e0392c'); } else P.rect(8, 4, 2, 1, '#e0392c'); }, '#2a2a30');
+  SPR.lm_mailbox = mbox(true); SPR.lm_mailboxD = mbox(false);
+  SPR.lm_glyph = pix(26, 20, P => {
+    P.ell(13, 11, 12, 8.4, '#b0724e'); P.ell(11, 9, 9, 5.4, '#c4865e');
+    P.map((x, y) => { const n = vnoise(x / 4, y / 4, 33); if (n < .3) return '#7a4430'; if (y >= 16) return '#8a5038'; });
+    const cv = '#f0d0a8';
+    for (let a = 0; a < 14; a++) { const t = a * .55, r = .4 + a * .24; P.set(7 + Math.cos(t) * r, 9 + Math.sin(t) * r, cv); }
+    P.rect(13, 8, 4, 1, cv); P.set(13, 9, cv); P.set(16, 9, cv); P.set(17, 7, cv); P.set(18, 6, cv); P.set(12, 7, cv);
+    P.rect(19, 12, 3, 1, cv); P.set(18, 11, cv); P.set(18, 13, cv); P.set(22, 11, cv); P.set(22, 13, cv);
+  }, '#4a2618');
+  SPR.glyphBig = pix(96, 64, P => {
+    P.ell(48, 34, 46, 29, '#9a5a3c'); P.ell(44, 30, 38, 22, '#b0724e');
+    P.map((x, y) => { const n = vnoise(x / 7, y / 7, 34); if (n < .28) return '#6e3a28'; if (n > .78) return '#c4865e'; });
+    const cv = '#f4d8b4';
+    for (let a = 0; a < 60; a++) { const t = a * .32, r = 1 + a * .17; P.dot(22 + Math.cos(t) * r, 26 + Math.sin(t) * r, 1, cv); }
+    P.line(42, 30, 58, 30, 2, cv); P.line(58, 30, 62, 23, 2, 1, cv); P.line(62, 23, 66, 24, 2, cv); P.set(61, 21, cv);
+    for (const x of [44, 47, 54, 57]) P.line(x, 31, x + (x < 50 ? -1 : 1), 38, 1, cv);
+    P.line(42, 30, 38, 34, 1, cv);
+    const hand = (x, y) => { P.ell(x, y, 2.2, 2.6, cv); for (let i = 0; i < 4; i++) P.line(x - 1.5 + i, y - 2, x - 2.5 + i * 1.4, y - 6, 1, cv); P.line(x + 2, y, x + 4, y - 2, 1, cv); };
+    hand(26, 48); hand(33, 50);
+    P.ell(70, 46, 5, 2.4, cv); P.ell(70, 46, 3.4, 1.2, '#9a5a3c'); P.line(75, 46, 79, 43, 1, cv); P.line(75, 46, 79, 49, 1, cv); P.set(67, 45, cv);
+    for (let a = 0; a < 8; a++) { const t = a / 8 * TAU; P.line(76 + Math.cos(t) * 5, 18 + Math.sin(t) * 5, 76 + Math.cos(t) * 8, 18 + Math.sin(t) * 8, 1, cv); } for (let a = 0; a < 20; a++) { const t = a / 20 * TAU; P.set(76 + Math.cos(t) * 3.4, 18 + Math.sin(t) * 3.4, cv); }
+    P.ell(48, 13, 1.4, 1.4, cv); P.line(48, 15, 48, 21, 1, cv); P.line(45, 17, 51, 17, 1, cv); P.line(48, 21, 46, 25, 1, cv); P.line(48, 21, 50, 25, 1, cv);
+  }, '#4a2618');
+  SPR.lm_dskull = pix(14, 9, P => { P.ell(6, 5, 5, 3, '#e6dcc4'); P.ell(11, 6, 3, 1.6, '#e6dcc4'); P.set(5, 4, '#5a4a38'); P.line(3, 7, 13, 7, 1, '#cbbd9e'); for (let x = 8; x < 13; x += 2) P.set(x, 8, '#fffaf0'); }, '#6e604a');
+  SPR.lm_bell = pix(26, 32, P => {
+    P.rect(2, 4, 3, 28, '#7a5a3a'); P.rect(21, 4, 3, 28, '#7a5a3a'); P.rect(2, 4, 1, 28, '#9a7650');
+    P.rect(0, 3, 26, 3, '#5a4030'); P.rect(1, 1, 24, 2, '#6a4a36');
+    P.rect(12, 6, 2, 3, '#3a2a20');
+    for (let y = 9; y <= 20; y++) { const t = (y - 9) / 11, hw = 2.5 + t * t * 5; for (let x = Math.round(13 - hw); x <= Math.round(13 + hw); x++) P.set(x, y, x < 11 ? '#e8b860' : x > 15 ? '#8a5a22' : '#c08a3a'); }
+    P.rect(7, 20, 13, 1, '#6a4418'); P.dot(13, 22, 2, '#4a3010');
+    P.rect(0, 30, 26, 2, '#6a5a4a');
+  }, '#2a1c10');
+  // ---------- the train ----------
+  const twheel = (P, cx, cy, r, col) => { P.ell(cx, cy, r, r, col); P.ell(cx, cy, Math.max(.8, r - 1.2), Math.max(.8, r - 1.2), '#3a2a2a'); P.set(cx, cy, col); };
+  SPR.loco = [0, 1].map(f => pix(48, 30, P => {
+    P.rect(2, 4, 14, 18, '#a83a2c'); P.rect(1, 3, 16, 2, '#2a2224'); P.rect(5, 7, 7, 5, '#f4d890'); P.rect(2, 4, 2, 18, '#c85a44');
+    P.rect(14, 10, 29, 10, '#2c3a3a'); P.rect(14, 10, 29, 2, '#4c5e5c'); P.rect(14, 18, 29, 2, '#1e2828');
+    P.rect(21, 10, 1, 10, '#c9a04a'); P.rect(31, 10, 1, 10, '#c9a04a');
+    P.ell(27, 9, 2.4, 2, '#c9a04a');
+    P.rect(36, 2, 5, 8, '#2a2224'); P.rect(35, 1, 7, 2, '#3a3234');
+    P.rect(42, 9, 3, 3, '#ffe27a');
+    P.rect(2, 20, 42, 2, '#2a2224');
+    for (let i = 0; i < 4; i++) P.line(43 + i * .6, 20, 47, 26, 1, '#c84a3a');
+    twheel(P, 12, 24, 4.5, '#c8402c'); twheel(P, 22, 24, 4.5, '#c8402c'); twheel(P, 32, 24, 4.5, '#c8402c'); twheel(P, 40, 26, 2.5, '#c8402c');
+    P.line(12, f ? 22 : 26, 32, f ? 22 : 26, 1, '#b8bcc4');
+  }, '#120c0c'));
+  SPR.tender = pix(26, 24, P => { P.rect(1, 6, 24, 13, '#2a2e30'); P.rect(1, 6, 24, 2, '#4a5052'); for (let x = 2; x < 24; x += 3) P.dot(x, 5, 2, '#141414'); P.rect(1, 18, 24, 2, '#1a1a1c'); twheel(P, 6, 20, 3, '#5a5050'); twheel(P, 19, 20, 3, '#5a5050'); }, '#0c0c0c');
+  SPR.boxcar = pix(40, 26, P => { P.rect(1, 3, 38, 16, '#9a4a32'); P.rect(1, 2, 38, 2, '#5a2a1e'); for (let x = 3; x < 38; x += 4) P.rect(x, 4, 1, 15, '#7e3a26'); P.rect(15, 6, 10, 13, '#7e3a26'); P.rect(16, 7, 8, 11, '#8a4230'); P.rect(23, 12, 1, 2, '#d8c8a0'); P.rect(1, 19, 38, 2, '#2a1a16'); twheel(P, 6, 21, 3, '#5a5050'); twheel(P, 11, 21, 3, '#5a5050'); twheel(P, 29, 21, 3, '#5a5050'); twheel(P, 34, 21, 3, '#5a5050'); }, '#140a08');
+  SPR.passcar = pix(42, 26, P => { P.rect(1, 4, 40, 15, '#3f6e58'); P.ell(21, 4, 20, 2.4, '#2a3a32'); P.rect(1, 12, 40, 1, '#c9a04a'); for (let k = 0; k < 6; k++) P.rect(4 + k * 6, 6, 4, 5, '#f2dfa0'); P.rect(1, 19, 40, 2, '#1e2a24'); twheel(P, 6, 21, 3, '#5a5050'); twheel(P, 11, 21, 3, '#5a5050'); twheel(P, 31, 21, 3, '#5a5050'); twheel(P, 36, 21, 3, '#5a5050'); }, '#0e1410');
+  SPR.caboose = pix(32, 28, P => { P.rect(2, 8, 28, 13, '#b0402c'); P.rect(2, 8, 28, 1, '#d06048'); P.rect(10, 2, 12, 7, '#b0402c'); P.rect(9, 1, 14, 2, '#3a2420'); P.rect(12, 4, 3, 3, '#f2dfa0'); P.rect(17, 4, 3, 3, '#f2dfa0'); P.rect(6, 11, 5, 5, '#f2dfa0'); P.rect(21, 11, 5, 5, '#f2dfa0'); P.rect(0, 7, 32, 1, '#3a2420'); P.rect(0, 21, 32, 2, '#2a1a16'); twheel(P, 8, 23, 3, '#5a5050'); twheel(P, 24, 23, 3, '#5a5050'); }, '#140a08');
+  // ---------- more creatures ----------
+  SPR.coyote = [0, 1, 2].map(f => pix(16, 14, P => {
+    const c = '#a8907a', d = '#7a6656', l = '#d8c4ac';
+    if (f === 2) {
+      P.ell(8, 7, 5, 2.6, c); P.line(4, 6, 1, 4, 2, 1, d);
+      P.ell(13, 4.5, 2.2, 1.8, c); P.line(14, 4, 15.5, 5, 1, d); P.set(12, 2.4, d); P.set(13.6, 2.2, d); P.set(13.5, 4, '#222');
+      P.line(5, 9, 4, 13, 1, d); P.line(7, 9, 8, 13, 1, d); P.line(10, 9, 9, 13, 1, d); P.line(12, 9, 13, 13, 1, d); P.set(7, 6, l);
+    } else {
+      P.line(4, 12, 1, 12, 2, 1, d);
+      P.ell(6, 9, 3.4, 3.6, c); P.ell(7.5, 6, 2.4, 3, c); P.set(6, 8, l); P.set(7, 9, l);
+      const hx = 9, hy = f ? 1.8 : 3;
+      P.ell(hx, hy + 1, 2, 1.7, c); P.line(hx + 1, hy + (f ? 0 : 1.4), hx + 3, hy - (f ? 1.4 : -1.2), 1, d);
+      P.set(hx - 1, hy - .6, d); P.set(hx + .5, hy - 1, d); P.set(hx + .6, hy + .6, '#222');
+      P.line(8, 10, 8, 13, 1, d); P.line(5, 12, 9, 13, 1, d);
+    }
+  }, '#3a2e26'));
+  SPR.bighorn = [0, 1].map(f => pix(16, 15, P => {
+    const c = '#8a6a4c', d = '#6a4e36', w = '#efe4d2';
+    P.ell(7, 8, 5, 3, c); P.ell(3, 8, 1.8, 2, w);
+    P.ell(12, 5, 2, 1.8, c); P.set(13.8, 6, d); P.set(12.6, 4.5, '#222');
+    for (let a = 0; a < 9; a++) { const t = a / 8 * TAU * .8; P.set(11 + Math.cos(t + 2.2) * 2, 3.6 + Math.sin(t + 2.2) * 2, '#d8c49a'); }
+    const k = f ? 1 : 0; P.line(4, 10, 4 - k, 14, 1, d); P.line(6, 10, 6 + k, 14, 1, d); P.line(9, 10, 9 - k, 14, 1, d); P.line(11, 10, 11 + k, 14, 1, d);
+  }, '#2e2216'));
+  SPR.scorp = [0, 1].map(f => pix(11, 8, P => { const c = '#8a6a3a'; P.ell(5, 5, 2.4, 1.4, c); P.line(3, 5, 1, 4, 1, c); P.line(1, 4, 1.5, 1.5, 1, c); P.set(2.5, 1, '#5a3a1a'); P.line(7, 4, 9.5, 3 + f, 1, c); P.line(7, 6, 9.5, 7 - f, 1, c); for (let i = 0; i < 3; i++) { P.set(4 + i, 7, '#6a4a2a'); P.set(4 + i, 3, '#6a4a2a'); } }, null));
+  SPR.wren = [0, 1, 2].map(f => pix(7, 6, P => {
+    if (f < 2) { P.ell(3, 3.5, 2, 1.4, '#8a6a4a'); P.set(2, 3, '#e8dcc8'); P.set(4, 4, '#e8dcc8'); P.set(5, f ? 3 : 2, '#6a4a32'); P.set(5.6, f ? 3.6 : 2.4, '#3a2a1a'); P.set(.6, 2.6, '#6a4a32'); P.set(2.5, 5, '#5a3a2a'); P.set(3.5, 5, '#5a3a2a'); }
+    else { P.ell(3, 3, 1.6, 1, '#8a6a4a'); P.line(1, 1, 3, 3, 1, '#6a4a32'); P.line(5, 1, 3, 3, 1, '#6a4a32'); }
+  }, '#2a1c12'));
+  SPR.wrenUp = pix(7, 6, P => { P.ell(3, 3, 1.6, 1, '#8a6a4a'); P.line(.5, 4.5, 3, 3, 1, '#6a4a32'); P.line(5.5, 4.5, 3, 3, 1, '#6a4a32'); }, '#2a1c12');
   // ghost sea
   const ghost = (w, h, fn) => pix(w, h, fn, null);
   SPR.gfish = ghost(12, 6, P => { P.ell(5, 3, 4, 2, '#8feaff'); P.ell(5, 3, 2.8, 1, '#2a8fb8'); P.line(9, 3, 11.5, .8, 1, '#8feaff'); P.line(9, 3, 11.5, 5.2, 1, '#8feaff'); P.set(3, 2.6, '#e8ffff'); });
@@ -305,6 +501,10 @@ function buildGlows() {
   GLOW.moth = makeGlow(6, [200, 255, 170], .8);
   GLOW.horse = makeGlow(40, [255, 214, 160], .16);
   GLOW.sea = makeGlow(12, [120, 230, 255], .35);
+  GLOW.uv = makeGlow(7, [110, 255, 225], .8);
+  GLOW.neon = makeGlow(16, [255, 90, 110], .5);
+  GLOW.lamp = makeGlow(26, [255, 230, 160], .45);
+  GLOW.win = makeGlow(5, [255, 220, 150], .7);
 }
 
 /* ============================== world ============================== */
@@ -312,15 +512,37 @@ const CHS = 128;
 const riverY = x => 150 + 80 * Math.sin(x / 330) + 30 * Math.sin(x / 127 + 2.1);
 const riverHW = x => 9 + 3 * Math.sin(x / 210 + 1);
 const inRiverBed = (x, y, pad) => Math.abs(y - riverY(x)) < riverHW(x) + (pad || 0);
-function biomeAt(x, y) {
-  const r = fbm(x / 420, y / 420, 3), b = fbm(x / 560, y / 560, 11), m = fbm(x / 380, y / 380, 29);
-  if (r > .64) return 4;      // red rock
-  if (b < .37) return 0;      // dunes
-  if (b > .66) return 3;      // salt flats
-  if (m > .58) return 2;      // lush scrub
-  return 1;                   // scrub
+// the old railroad runs east to west forever
+const RAILY = -560;
+const nearRail = (y, pad) => Math.abs(y - RAILY) < pad;
+// regions: big warped cells, each its own little land with its own name
+const RC = 560, regCache = new Map();
+let RGX = 0, RGY = 0, ORX = 0, ORY = 0;
+function regionOf(x, y) {
+  const wx = x + (vnoise(x / 260, y / 260, 77) - .5) * 240 + (vnoise(x / 70, y / 70, 79) - .5) * 34;
+  const wy = y + (vnoise(x / 260, y / 260, 78) - .5) * 240 + (vnoise(x / 70, y / 70, 80) - .5) * 34;
+  const gx = Math.floor(wx / RC), gy = Math.floor(wy / RC); let best = 1e18;
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const cx = gx + i, cy = gy + j, px = (cx + .12 + .76 * hash(cx, cy, 81)) * RC, py = (cy + .12 + .76 * hash(cx, cy, 82)) * RC;
+    const d = (wx - px) * (wx - px) + (wy - py) * (wy - py); if (d < best) { best = d; RGX = cx; RGY = cy; }
+  }
 }
-const BIOME_NAME = ['dunes', 'scrub', 'blooming scrub', 'salt flats', 'red rock'];
+const BW = [1.1, 1.15, .8, .8, 1, .95, .8, .7, .65];
+const RN_A = ['Coyote', 'Lonesome', 'Sleeping', 'Little', 'Whistling', 'Copper', 'Rattlesnake', 'Bluebird', 'Sixmile', 'Dry Bell', 'Lantern', 'Hollow', 'Juniper', 'Moonlight', 'Saddle', 'Thimble', 'Quiet', 'Honey', 'Tin Cup', 'Velvet', 'Kestrel', 'Sundown', 'Two Moon', 'Crooked', 'Cricket', 'Feather', 'Pinto', 'Mockingbird', 'Silver', 'Paper', 'Starling', 'Button', 'Cinnamon', 'Peach', 'Lavender', 'Halfway', "Old Pete's", 'Biscuit', 'Wishbone', 'Lullaby', 'Echo', 'Gentle', 'Buttercup', 'Sparrow', 'Harmonica', 'Blue Mule', 'Dandelion', 'Sugar', 'Wagon Wheel', 'Tumbleweed', 'Hush', 'Marigold', 'Pocket', 'Cloudy', 'Sleepy Owl', 'Forgotten'];
+const RN_B = [['Dunes', 'Sands', 'Drifts', 'Sandhills'], ['Wash', 'Flats', 'Draw', 'Hollow', 'Basin'], ['Springs', 'Gardens', 'Green', 'Bottoms'], ['Salt Pan', 'Dry Lake', 'Playa', 'Salt Flats'], ['Mesa', 'Canyon', 'Buttes', 'Bluffs', 'Red Rocks'], ['Woods', 'Grove', 'Thicket'], ['Meadow', 'Fields', 'Bloom'], ['White Sands', 'Gypsum Hills', 'Pale Dunes'], ['Cinders', 'Lava Beds', 'Black Rocks']];
+function regionInfo(gx, gy) {
+  const k = gx + ',' + gy; let r = regCache.get(k); if (r) return r;
+  const dx = gx - ORX, dy = gy - ORY; let b;
+  if (!dx && !dy) b = 1;
+  else if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1) b = [0, 2, 4, 5, 1, 0, 6, 2][Math.floor(hash(gx, gy, 83) * 8)];
+  else { let tot = 0; for (const w of BW) tot += w; let u = hash(gx, gy, 84) * tot; b = 0; for (let i = 0; i < BW.length; i++) { u -= BW[i]; if (u <= 0) { b = i; break; } } }
+  const name = (!dx && !dy) ? 'Nowhere in Particular' : RN_A[Math.floor(hash(gx, gy, 85) * RN_A.length)] + ' ' + RN_B[b][Math.floor(hash(gx, gy, 86) * RN_B[b].length)];
+  r = { gx, gy, b, name, key: k }; regCache.set(k, r); return r;
+}
+function regionAt(x, y) { regionOf(x, y); return regionInfo(RGX, RGY); }
+regionOf(0, 0); ORX = RGX; ORY = RGY;
+function biomeAt(x, y) { const b = regionAt(x, y).b; if (b === 1 && fbm(x / 300, y / 300, 29) > .64) return 2; return b; }
+const BIOME_NAME = ['dunes', 'scrub', 'green scrub', 'salt flats', 'red rock', 'Joshua woods', 'wildflower meadow', 'white sands', 'cinder fields'];
 
 // story stones
 const LINES = [
@@ -340,6 +562,7 @@ function placeRings() {
     const a = -1.1 + i * 2.39996, d = 210 + i * 155;
     let x = Math.cos(a) * d, y = Math.sin(a) * d;
     let tries = 0; while (inRiverBed(x, y, 40) && tries++ < 12) y += (y > riverY(x) ? 26 : -26);
+    if (Math.abs(y - RAILY) < 80) y = RAILY + (y < RAILY ? -80 : 80);
     const stones = [];
     for (let k = 0; k < 8; k++) { const t = k / 8 * TAU + .2; stones.push({ x: x + Math.cos(t) * 17, y: y + Math.sin(t) * 11, v: k % 3 }); }
     RINGS.push({ i, x, y, stones, found: false, pulse: 0 });
@@ -364,7 +587,7 @@ function oasisCell(gx, gy) {
   if (gx === -1 && gy === -1) o = makeOasis(Object.assign({}, FIXED_OASIS), 77);
   else if (hash(gx, gy, 51) < .38) {
     const x = gx * OCELL + 90 + hash(gx, gy, 52) * (OCELL - 180), y = gy * OCELL + 90 + hash(gx, gy, 53) * (OCELL - 180);
-    const ok = !inRiverBed(x, y, 50) && dist(x, y, 0, 0) > 300 && !nearRing(x, y, 90) && dist(x, y, FIXED_OASIS.x, FIXED_OASIS.y) > 300;
+    const ok = !inRiverBed(x, y, 50) && !nearRail(y, 70) && dist(x, y, 0, 0) > 300 && !nearRing(x, y, 90) && dist(x, y, FIXED_OASIS.x, FIXED_OASIS.y) > 300;
     if (ok) o = makeOasis({ x, y, rx: 24 + hash(gx, gy, 54) * 12, ry: 12 + hash(gx, gy, 55) * 6 }, gx * 31 + gy * 17);
   }
   oasisCache.set(k, o); return o;
@@ -393,7 +616,7 @@ function mesaCell(gx, gy) {
   const prob = biomeAt(x, y) === 4 ? .75 : .16;
   if (hash(gx, gy, 60) < prob) {
     const w = Math.round(56 + hash(gx, gy, 63) * 50), top = Math.round(16 + hash(gx, gy, 64) * 10), cliff = Math.round(18 + hash(gx, gy, 65) * 12);
-    const ok = !inRiverBed(x, y, 60) && dist(x, y, 0, 0) > 170 && !nearRing(x, y, 110) && oasesNear(x, y, 140).every(o => dist(x, y, o.x, o.y) > 130);
+    const ok = !inRiverBed(x, y, 60) && !nearRail(y, 80) && dist(x, y, 0, 0) > 170 && !nearRing(x, y, 110) && oasesNear(x, y, 140).every(o => dist(x, y, o.x, o.y) > 130);
     if (ok) m = { x, y, rx: w / 2 - 1, ry: top / 2, w, top, cliff, seed: gx * 97 + gy * 13, spr: null };
   }
   mesaCache.set(k, m); return m;
@@ -402,7 +625,7 @@ function mesasNear(x, y, r) { const out = []; const x0 = Math.floor((x - r) / MC
 
 // a camp where some cowboys had a long night
 const CCELL = 900, campCache = new Map();
-function campOk(x, y) { return !inRiverBed(x, y, 40) && !nearRing(x, y, 110) && oasesNear(x, y, 160).every(o => dist(x, y, o.x, o.y) > 120) && mesasNear(x, y, 160).every(m => !inEll(x, y, m, 44)) && dist(x, y, 0, 0) > 200; }
+function campOk(x, y) { return !inRiverBed(x, y, 40) && !nearRail(y, 90) && !nearRing(x, y, 110) && oasesNear(x, y, 160).every(o => dist(x, y, o.x, o.y) > 120) && mesasNear(x, y, 160).every(m => !inEll(x, y, m, 44)) && dist(x, y, 0, 0) > 200; }
 function makeCamp(x, y) {
   const c = { x, y, items: [], snoreT: 0, said: 0 };
   const add = (kind, dx, dy) => c.items.push({ kind, x: x + dx, y: y + dy });
@@ -417,7 +640,67 @@ function campCell(gx, gy) {
   campCache.set(k, c); return c;
 }
 function campsNear(x, y, r) { const out = []; const x0 = Math.floor((x - r) / CCELL), x1 = Math.floor((x + r) / CCELL), y0 = Math.floor((y - r) / CCELL), y1 = Math.floor((y + r) / CCELL); for (let gy = y0; gy <= y1; gy++) for (let gx = x0; gx <= x1; gx++) { const c = campCell(gx, gy); if (c) out.push(c); } return out; }
+// landmarks: little places with little stories
+const LCELL = 600, lmCache = new Map(), LM_FIXED = [];
+const LMT = {
+  windmill: { b: [0, 1, 2, 5, 6], rad: 36 }, ghosttown: { b: [1, 3, 5, 0], rad: 84 }, whale: { b: [0, 7, 3], rad: 62 }, arch: { b: [4, 8, 5], rad: 40 },
+  wagon: { b: [0, 1, 2, 3, 5, 6], rad: 30 }, station: { b: [1, 3, 5, 0], rad: 50 }, mailbox: { b: null, rad: 12 }, petroglyph: { b: [4, 5, 8, 1], rad: 16 },
+  dinobones: { b: [3, 7, 0, 4], rad: 46 }, bell: { b: [2, 6, 1, 5], rad: 22 }
+};
+function lmOk(x, y, rad) {
+  if (inRiverBed(x, y, rad * .7 + 30) || nearRail(y, rad * .6 + 40)) return false;
+  if (dist(x, y, 0, 0) < 150 + rad) return false;
+  if (nearRing(x, y, 90 + rad)) return false;
+  for (const o of oasesNear(x, y, 220)) if (dist(x, y, o.x, o.y) < 75 + rad) return false;
+  for (const m of mesasNear(x, y, 220)) if (inEll(x, y, m, rad + 24)) return false;
+  for (const c of campsNear(x, y, 320)) if (dist(x, y, c.x, c.y) < 100 + rad) return false;
+  for (const f of LM_FIXED) if (dist(x, y, f.x, f.y) < 130 + rad) return false;
+  return true;
+}
+function makeLM(type, x, y, id) {
+  const L = { type, x, y, id, rad: LMT[type].rad, items: [] };
+  const add = (kind, dx, dy) => L.items.push({ kind, x: x + dx, y: y + dy });
+  switch (type) {
+    case 'windmill': add('lm_windmill', 0, 0); add('lm_tank', 22, 4); L.trough = { x: x - 12, y: y + 13 }; break;
+    case 'ghosttown': add('lm_store', -52, 3); add('lm_saloon', 0, 0); add('lm_hotel', 52, -1); add('lm_barrel', -26, 9); add('lm_barrel', 76, 7); break;
+    case 'whale': add('lm_wskull', -46, 1); for (let i = 0; i < 6; i++) { add('lm_ribB', -30 + i * 11, -5); add('lm_ribF', -30 + i * 11, 6); } add('lm_wtail', 46, 0); break;
+    case 'arch': add('lm_archL', -25, 0); add('lm_archR', 25, 0); break;
+    case 'wagon': add('lm_wagon', 0, 0); add('lm_wheel', 25, 10); break;
+    case 'station': add('lm_station', 0, 0); add('lm_pump', 28, 7); add('lm_sign', -32, 6); break;
+    case 'mailbox': add('lm_mailbox', 0, 0); break;
+    case 'petroglyph': add('lm_glyph', 0, 0); break;
+    case 'dinobones': add('lm_dskull', 34, 1); break;
+    case 'bell': add('lm_bell', 0, 0); break;
+  }
+  return L;
+}
+LM_FIXED.push(makeLM('mailbox', -78, -112, 'F1'), makeLM('windmill', 236, 52, 'F2'));
+function lmPick(gx, gy, t) {
+  const x = gx * LCELL + 110 + hash(gx, gy, 92 + t * 3) * (LCELL - 220), y = gy * LCELL + 110 + hash(gx, gy, 93 + t * 3) * (LCELL - 220);
+  const b = biomeAt(x, y), cands = Object.keys(LMT).filter(n => !LMT[n].b || LMT[n].b.includes(b));
+  let tot = 0; const ws = cands.map(n => { const w = n === 'mailbox' ? 1.7 : 1; tot += w; return w; });
+  let u = hash(gx, gy, 140 + t) * tot, type = cands[0]; for (let i = 0; i < cands.length; i++) { u -= ws[i]; if (u <= 0) { type = cands[i]; break; } }
+  return { x, y, type };
+}
+function lmCell(gx, gy) {
+  const k = gx + ',' + gy; if (lmCache.has(k)) return lmCache.get(k);
+  const out = LM_FIXED.filter(f => Math.floor(f.x / LCELL) === gx && Math.floor(f.y / LCELL) === gy);
+  if (hash(gx, gy, 91) < .66) {
+    for (let t = 0; t < 5; t++) {
+      const c = lmPick(gx, gy, t);
+      if (c.type !== 'mailbox') { let dup = false; for (let j = -1; j <= 1 && !dup; j++) for (let i = -1; i <= 1; i++) { if (!i && !j) continue; if (hash(gx + i, gy + j, 91) < .66 && lmPick(gx + i, gy + j, 0).type === c.type) { dup = true; break; } } if (dup) continue; }
+      if (lmOk(c.x, c.y, LMT[c.type].rad)) { out.push(makeLM(c.type, c.x, c.y, 'L' + gx + ',' + gy)); break; }
+    }
+  }
+  lmCache.set(k, out); return out;
+}
+function lmsNear(x, y, r) { const out = []; const x0 = Math.floor((x - r) / LCELL), x1 = Math.floor((x + r) / LCELL), y0 = Math.floor((y - r) / LCELL), y1 = Math.floor((y + r) / LCELL); for (let gy = y0; gy <= y1; gy++) for (let gx = x0; gx <= x1; gx++) { const c = lmCell(gx, gy); for (const L of c) out.push(L); } return out; }
+const LM_ICON = { windmill: 'lm_windmill', ghosttown: 'lm_saloon', whale: 'lm_wskull', wagon: 'lm_wagon', station: 'lm_sign', mailbox: 'lm_mailbox', petroglyph: 'lm_glyph', dinobones: 'lm_dskull', bell: 'lm_bell' };
+function archIcon() { if (SPR.archIcon) return SPR.archIcon; const c = mk(70, 52), g = c.getContext('2d'); g.drawImage(SPR.lm_archL, 0, 16); g.drawImage(SPR.lm_archR, 52, 16); g.drawImage(SPR.lm_archTop, 0, 0); return SPR.archIcon = c; }
+const lmIcon = t => t === 'arch' ? archIcon() : SPR[LM_ICON[t]];
 function blocked(x, y, pad) {
+  if (nearRail(y, 9 + pad)) return true;
+  for (const L of lmsNear(x, y, 140)) if (dist(x, y, L.x, L.y) < L.rad + 8 + pad) return true;
   for (const c of campsNear(x, y, 60)) if (dist(x, y, c.x, c.y) < 58 + pad) return true;
   for (const m of mesasNear(x, y, 80)) if (inEll(x, y, m, pad + 4)) return true;
   for (const o of oasesNear(x, y, 80)) if (inEll(x, y, o, pad + 14)) return true;
@@ -431,16 +714,26 @@ const DEF = {
   marigold: { r: 0, disc: 'marigold' }, sage: { r: 0, sway: 1 }, ocotillo: { r: 2, disc: 'ocotillo', sh: 4 },
   rockS: { r: 2.5, sh: 4 }, rockB: { r: 5.5, sh: 8 }, hoodoo: { r: 4, disc: 'hoodoo', sh: 6 },
   skull: { r: 0, disc: 'skull' }, shell: { r: 0, disc: 'shell' }, rose: { r: 0, disc: 'desertrose' }, obsidian: { r: 0, disc: 'obsidian' },
-  log: { r: 0, disc: 'petlog' }, cowboyA: { r: 7, sh: 12 }, cowboyB: { r: 6, sh: 9 }, bottle: { r: 1.5, sh: 2 }, bottleS: { r: 0 }, guitar: { r: 0 }, tuft: { r: 0 }, dig: { r: 0 }, palm: { r: 3, disc: 'palm', sh: 8 }, reed: { r: 0 }
+  log: { r: 0, disc: 'petlog' },
+  joshua: { r: 3, disc: 'joshua', sh: 7 }, yucca: { r: 2, disc: 'yucca', sh: 4 }, poppy: { r: 0, disc: 'poppy' }, lupine: { r: 0, disc: 'lupine' }, lily: { r: 0, disc: 'lily' },
+  selenite: { r: 0, disc: 'selenite' }, lavarock: { r: 4.5, disc: 'lavarock', sh: 7 }, cindercone: { box: [19, 8], disc: 'cindercone' },
+  lm_windmill: { r: 4, sh: 7 }, lm_tank: { r: 8, sh: 11 }, lm_saloon: { box: [21, 12] }, lm_store: { box: [21, 12] }, lm_hotel: { box: [21, 12] }, lm_barrel: { r: 3, sh: 4 },
+  lm_wskull: { r: 8, sh: 10 }, lm_ribB: { r: 0 }, lm_ribF: { r: 0 }, lm_wtail: { r: 3 }, lm_archL: { r: 6, sh: 8 }, lm_archR: { r: 6, sh: 8 },
+  lm_wagon: { box: [17, 7] }, lm_wheel: { r: 0 }, lm_station: { box: [20, 12] }, lm_pump: { r: 3, sh: 3 }, lm_sign: { r: 2, sh: 3 },
+  lm_mailbox: { r: 2, sh: 3 }, lm_glyph: { r: 9, sh: 11 }, lm_dskull: { r: 4, sh: 5 }, lm_bell: { box: [12, 3] }, cowboyA: { r: 7, sh: 12 }, cowboyB: { r: 6, sh: 9 }, bottle: { r: 1.5, sh: 2 }, bottleS: { r: 0 }, guitar: { r: 0 }, tuft: { r: 0 }, dig: { r: 0 }, palm: { r: 3, disc: 'palm', sh: 8 }, reed: { r: 0 }
 };
 const TABLE = [
   [['tuft', .3], ['sage', .16], ['shell', .12], ['skull', .07], ['barrel', .1], ['dig', .14], ['saguaro', .06]],
   [['saguaro', .2], ['prickly', .14], ['barrel', .1], ['sage', .24], ['ocotillo', .07], ['rockS', .12], ['dig', .05], ['tuft', .08]],
   [['saguaro', .14], ['prickly', .18], ['marigold', .26], ['sage', .16], ['ocotillo', .1], ['barrel', .07], ['tuft', .06], ['dig', .03]],
   [['rockS', .22], ['skull', .08], ['rose', .16], ['dig', .2], ['log', .1], ['tuft', .14], ['obsidian', .05]],
-  [['hoodoo', .2], ['rockB', .24], ['rockS', .18], ['obsidian', .09], ['ocotillo', .07], ['log', .07], ['dig', .12]]
+  [['hoodoo', .2], ['rockB', .24], ['rockS', .18], ['obsidian', .09], ['ocotillo', .07], ['log', .07], ['dig', .12]],
+  [['joshua', .34], ['yucca', .14], ['sage', .2], ['rockS', .1], ['tuft', .12], ['dig', .07], ['barrel', .03]],
+  [['poppy', .3], ['lupine', .24], ['lily', .12], ['marigold', .14], ['sage', .08], ['tuft', .06], ['dig', .04], ['prickly', .02]],
+  [['selenite', .2], ['yucca', .22], ['tuft', .2], ['dig', .16], ['shell', .06], ['skull', .04]],
+  [['lavarock', .3], ['cindercone', .06], ['obsidian', .14], ['rockS', .12], ['tuft', .1], ['dig', .14], ['ocotillo', .06]]
 ];
-const DENS = [4, 6, 8, 3, 6];
+const DENS = [4, 6, 8, 3, 6, 6, 11, 3, 5];
 const FIXED = [{ kind: 'saguaro', x: 38, y: -22, v: 0 }, { kind: 'skull', x: -24, y: 18 }, { kind: 'dig', x: 26, y: 26 }, { kind: 'barrel', x: -40, y: -18 }, { kind: 'sage', x: 12, y: -34, v: 1 }];
 
 const chunks = new Map();
@@ -458,23 +751,26 @@ function getChunk(cx, cy) {
     const v = (r() * 4) | 0;
     if (!kind) continue; const d = DEF[kind];
     if (inRiverBed(x, y, 3) && kind !== 'tuft' && kind !== 'shell') continue;
-    if (blocked(x, y, d.r ? 6 : 2)) continue;
+    if (blocked(x, y, d.r ? 6 : d.box ? 22 : 2)) continue;
     if (x * x + y * y < 46 * 46) continue;
     ch.objs.push(mkObj(kind, x, y, v, cx + ',' + cy + ',' + i));
   }
   for (const f of FIXED) if (Math.floor(f.x / CHS) === cx && Math.floor(f.y / CHS) === cy) ch.objs.push(mkObj(f.kind, f.x, f.y, f.v || 0, 'f' + f.x + ',' + f.y));
   for (const o of oasesNear(x0 + 64, y0 + 64, 200)) { for (const p of [...o.palms, ...o.reeds, ...o.flowers]) if (Math.floor(p.x / CHS) === cx && Math.floor(p.y / CHS) === cy) ch.objs.push(mkObj(p.kind, p.x, p.y, 0, 'o' + Math.round(p.x) + ',' + Math.round(p.y))); }
   for (const cp of campsNear(x0 + 64, y0 + 64, 200)) for (const p of cp.items) if (Math.floor(p.x / CHS) === cx && Math.floor(p.y / CHS) === cy) { const o = mkObj(p.kind, p.x, p.y, 0, 'c' + Math.round(p.x) + ',' + Math.round(p.y)); o.camp = cp; ch.objs.push(o); }
+  for (const L of lmsNear(x0 + 64, y0 + 64, 200)) for (const p of L.items) if (Math.floor(p.x / CHS) === cx && Math.floor(p.y / CHS) === cy) { const o = mkObj(p.kind, p.x, p.y, 0, L.id + p.kind + Math.round(p.x)); o.lm = L; ch.objs.push(o); }
   ch.objs = ch.objs.filter(o => !(o.kind === 'dig' && S.dug[o.id]));
   return ch;
 }
 function mkObj(kind, x, y, v, id) {
-  const o = { kind, x, y, v, id, r: DEF[kind].r, disc: DEF[kind].disc || null, t: R() * 10 };
+  const o = { kind, x, y, v, id, r: DEF[kind].r || 0, box: DEF[kind].box || null, disc: DEF[kind].disc || null, t: R() * 10 };
+  if (kind === 'marigold') o.bl = biomeAt(x, y);
   switch (kind) {
     case 'saguaro': o.spr = SPR.sag[v % SPR.sag.length]; break;
     case 'sage': o.spr = SPR.sage[v % 3]; break;
     case 'tuft': o.spr = SPR.tuft[v % 3]; break;
     case 'marigold': o.spr = SPR.marigold; break;
+    case 'joshua': o.spr = SPR.joshua[v & 1]; break;
     case 'dig': o.spr = null; break;
     default: o.spr = SPR[kind];
   }
@@ -487,8 +783,14 @@ const PAL = {
   lush: ['#e3c08e', '#eed2a2', '#d2ac7c', '#a3b072'].map(hexc),
   flats: ['#f2e4c9', '#faf0dc', '#dccaa8', '#c9b593'].map(hexc),
   rock: ['#df9e72', '#ebb58b', '#c98460', '#b06e50'].map(hexc),
-  bed: ['#cfa67e', '#dcb994', '#b28962', '#9a7a62'].map(hexc)
+  bed: ['#cfa67e', '#dcb994', '#b28962', '#9a7a62'].map(hexc),
+  joshua: ['#e2c39a', '#ecd3ad', '#cfae84', '#a9a978'].map(hexc),
+  bloom: ['#dcc08e', '#e8d1a0', '#c9ab7a', '#93ad66'].map(hexc),
+  gypsum: ['#f6f1ea', '#fffdf8', '#e2dde0', '#cdc8d4'].map(hexc),
+  cinder: ['#4c4246', '#5e5257', '#3a3236', '#7a5a4c'].map(hexc)
 };
+const FLW = ['#f28a2e', '#9a7ad8', '#f6d24a', '#fff6ea'].map(hexc);
+const RB = ['#a89a8a', '#8f8274', '#c0b2a0'].map(hexc), RWD = ['#6e4a32', '#8a6040'].map(hexc), RST = ['#5a5c64', '#c8ccd4'].map(hexc);
 function crackD(wx, wy, cs, seed) {
   const gx = Math.floor(wx / cs), gy = Math.floor(wy / cs); let d1 = 1e9, d2 = 1e9;
   for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const px = (gx + i + hash(gx + i, gy + j, seed)) * cs, py = (gy + j + hash(gx + i, gy + j, seed + 1)) * cs; const d = (wx - px) * (wx - px) + (wy - py) * (wy - py); if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d; }
@@ -505,7 +807,7 @@ function genChunkStep(ch, rows) {
     G = ch.gen = { c, g, id, x0, y0, GS, gn, bg, rings, rv, y: 0 };
   }
   const { id, x0, y0, GS, gn, bg, rings, rv } = G, d = id.data;
-  const pals = [PAL.dunes, PAL.scrub, PAL.lush, PAL.flats, PAL.rock];
+  const pals = [PAL.dunes, PAL.scrub, PAL.lush, PAL.flats, PAL.rock, PAL.joshua, PAL.bloom, PAL.gypsum, PAL.cinder];
   const yEnd = Math.min(CHS, G.y + rows);
   for (let y = G.y; y < yEnd; y++) {
     const wy = y0 + y;
@@ -518,8 +820,10 @@ function genChunkStep(ch, rows) {
       const lo = vnoise(wx / 26, wy / 26, 41 + b);
       let col = P[0];
       if (lo + bv * .22 > .72) col = P[1]; else if (lo - bv * .22 < .2) col = P[2];
-      if (b === 0) { const n = vnoise(wx / 40, wy / 40, 7); const rp = ((wx * .85 + wy * .5 + n * 16) / 6.5) % 1; const rr = rp < 0 ? rp + 1 : rp; if (rr < .13) col = P[1]; else if (rr < .2) col = P[2]; }
-      else if (b === 1 || b === 2) { if (hs < .028) col = P[2]; else if (hs < .045) col = P[1]; else if (hs < (b === 2 ? .062 : .052)) col = P[3]; }
+      if (b === 0 || b === 7) { const n = vnoise(wx / 40, wy / 40, 7); const rp = ((wx * .85 + wy * .5 + n * 16) / 6.5) % 1; const rr = rp < 0 ? rp + 1 : rp; if (rr < .13) col = P[1]; else if (rr < .2) col = P[2]; if (b === 7 && hs < .012) col = P[3]; }
+      else if (b === 1 || b === 2 || b === 5) { if (hs < .028) col = P[2]; else if (hs < .045) col = P[1]; else if (hs < (b === 2 ? .062 : b === 5 ? .07 : .052)) col = P[3]; }
+      else if (b === 6) { const fl = vnoise(wx / 16, wy / 16, 63), ty = vnoise(wx / 46, wy / 46, 64); if (fl > .52 && hs < (fl - .5) * .42) col = FLW[ty < .42 ? 0 : ty < .66 ? 1 : ty < .82 ? 2 : 3]; else if (hs < .05) col = P[3]; }
+      else if (b === 8) { if (hs < .045) col = P[3]; else if (hs > .988) col = [150, 150, 165]; else if (vnoise(wx / 7, wy / 7, 61) > .72) col = P[1]; }
       else if (b === 3) { if (crackD(wx, wy, 13, 17) < 1.05) col = P[2]; else if (hs < .02) col = P[3]; }
       else if (b === 4) { const st = ((wy + vnoise(wx / 18, wy / 18, 23) * 7) / 8) % 1; if ((st < 0 ? st + 1 : st) < .1) col = P[2]; else if (hs < .03) col = P[3]; }
       const ry = rv[x][0], hw = rv[x][1], dy = Math.abs(wy - ry);
@@ -529,6 +833,12 @@ function genChunkStep(ch, rows) {
         else if (bv > .5 || hs < .3) col = hs < .12 ? B[3] : B[1];
       }
       for (const r of rings) { const dd = Math.hypot((wx - r.x), (wy - r.y) * 1.5); if (dd > 21 && dd < 52) { const f = (dd / 4.5) % 1; if (f < .22) col = mixc(col, [255, 246, 226], .55); } }
+      const ry2 = wy - RAILY;
+      if (ry2 > -8 && ry2 < 7) {
+        if (ry2 >= -6 && ry2 <= 5) col = hs < .3 ? RB[1] : hs < .6 ? RB[2] : RB[0]; else col = mixc(col, RB[0], .45);
+        if (ry2 >= -5 && ry2 <= 4 && ((wx % 6) + 6) % 6 < 2) col = ry2 === -5 ? RWD[1] : RWD[0];
+        if (ry2 === -3 || ry2 === 2) col = RST[0]; else if (ry2 === -4 || ry2 === 1) col = RST[1];
+      }
       const o = (y * CHS + x) * 4; d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = 255;
     }
   }
@@ -543,31 +853,73 @@ const ENTRIES = [
   ['plants', 'saguaro', 'Saguaro', 'Tall and patient. It grows its first arm at around seventy years old. No rush.', 'Stands tall in the scrub.'],
   ['plants', 'prickly', 'Prickly Pear', 'Flat green paddles with pink fruit on top, like it is wearing earrings.', 'Grows in the scrub.'],
   ['plants', 'barrel', 'Barrel Cactus', 'Round, ribbed, and leaning a little south. Wears a red flower like a hat.', 'Round and low to the ground.'],
-  ['plants', 'marigold', 'Desert Marigold', 'Only shows its face after rain. Bright yellow and a little proud of it.', 'Blooms after it rains.'],
+  ['plants', 'marigold', 'Desert Marigold', 'Only shows its face after rain, or out in the meadows. Bright yellow and a little proud of it.', 'Blooms after it rains.'],
   ['plants', 'ocotillo', 'Ocotillo', 'Looks like a bundle of sticks until you notice the small red flame on every tip.', 'Spiky whips with red tips.'],
   ['plants', 'palm', 'Fan Palm', 'Where there is a palm there is water. The horse knew that before you did.', 'Grows where there is water.'],
+  ['plants', 'joshua', 'Joshua Tree', 'Arms up like it is waving hello, or asking a question. It is actually a very tall yucca.', 'In the Joshua woods.'],
+  ['plants', 'yucca', 'Soaptree Yucca', 'A burst of spiky leaves with a tall stalk of white bells. It grows even in the white sands.', 'Spiky, with a tall flower stalk.'],
+  ['plants', 'poppy', 'Desert Poppy', 'Bright orange cups that close up at night and open again in the morning.', 'In the wildflower meadows.'],
+  ['plants', 'lupine', 'Lupine', 'Purple spires that smell a little like grape soda.', 'In the wildflower meadows.'],
+  ['plants', 'lily', 'Desert Lily', 'Waits underground for years, then blooms white like it never left.', 'In the wildflower meadows.'],
   ['birds', 'roadrunner', 'Roadrunner', 'Would rather run than fly. Stops, looks right at you, then leaves at once.', 'Fast, on foot, in open sand.'],
   ['birds', 'quail', 'Quail Family', 'A tiny family walking in a line. The feather on top bounces as they go.', 'Little families in the scrub.'],
+  ['birds', 'wrens', 'Cactus Wrens', 'A noisy little crowd. They all leave at once, then pretend that was the plan.', 'Little birds pecking in a group. Trot right up.'],
   ['birds', 'raven', 'Raven', 'Clever and loud. Almost certainly talking about you.', 'Flies over now and then.'],
   ['birds', 'hawk', 'Red-tailed Hawk', 'A slow circle high up. Its shadow slides over you like a cool hand.', 'Look for a shadow circling in the daytime.'],
   ['birds', 'owl', 'Great Horned Owl', 'Comes out at night and sits on the tallest cactus around. Blinks slowly.', 'Only out at night.'],
-  ['birds', 'hummingbird', 'Hummingbird', 'A green flash that hums. Visits the flowers that open after rain.', 'Near flowers after rain.'],
+  ['birds', 'hummingbird', 'Hummingbird', 'A green flash that hums. Visits the flowers.', 'Near flowers, after rain or in the meadows.'],
+  ['creatures', 'wildhorses', 'Wild Horses', 'A herd that has never been named either. If you run, they run with you.', 'Out in the open. Whinny if you see them.'],
+  ['creatures', 'coyote', 'Coyote', 'Sings at the moon from the top of a hill, then acts like it was someone else.', 'Listen at dusk and at night.'],
+  ['creatures', 'bighorn', 'Bighorn Sheep', 'Climbs where nothing should be able to climb, then just stands there looking proud.', 'In the red rocks and cinders.'],
+  ['creatures', 'jackrabbit', 'Jackrabbit', 'Mostly ears. Hops off in a zigzag the moment you get close.', 'Almost anywhere, if you are quiet.'],
+  ['creatures', 'lizard', 'Collared Lizard', 'Does push-ups on warm rocks to show off. Very fast when it wants to be.', 'On the flats and the rocks.'],
+  ['creatures', 'scorpion', 'Scorpion', 'Under the moon it glows blue-green. Nobody is quite sure why. Admire from a distance.', 'Only at night.'],
+  ['creatures', 'tortoise', 'Desert Tortoise', 'Moves at exactly the right speed for the desert. Older than the road.', 'Slow, in the greener places.'],
   ['rocks', 'hoodoo', 'Hoodoo', 'A stack of stone with a hat on top. The wind spent a very long time on it.', 'In the red rock country.'],
   ['rocks', 'mesa', 'Mesa', 'A table of red rock as big as a town. Something very tall must eat there.', 'Big, flat-topped, red.'],
   ['rocks', 'petlog', 'Petrified Log', 'A tree that slowly turned to stone. The bark is still there, only harder.', 'Lying on the flats and rock.'],
   ['rocks', 'desertrose', 'Desert Rose', 'Sand and gypsum grown into petals. A flower that never needs water.', 'On the pale salt flats.'],
   ['rocks', 'obsidian', 'Obsidian', 'Black glass from an old volcano. There is a tiny sky inside it.', 'Shiny black, among the rocks.'],
   ['rocks', 'geode', 'Geode', 'A plain stone with a purple cave inside. Pawed up out of the sand.', 'Paw at sparkles in the sand.'],
+  ['rocks', 'selenite', 'Selenite', 'Clear as ice and made of gypsum. The white sands are full of tiny broken pieces of it.', 'In the white sands.'],
+  ['rocks', 'lavarock', 'Lava Rock', 'Light and full of holes. It was liquid once, and very upset about it.', 'In the black cinder fields.'],
+  ['rocks', 'cindercone', 'Cinder Cone', 'A small sleeping volcano. Sleeping is the important part.', 'In the black cinder fields.'],
   ['things', 'shell', 'Seashell', 'A seashell, this far from any shore. The desert was the sea once.', 'Lying out in the dunes.'],
   ['things', 'fossilfish', 'Fossil Fish', 'A fish pressed into stone, still mid-swim. It was here first.', 'Paw at sparkles in the sand.'],
   ['things', 'skull', 'Cow Skull', 'Bleached clean by the sun. Quiet company.', 'Bones in the sand.'],
   ['things', 'spur', 'Rusty Spur', 'A rusty spur. Whoever wore it is not riding anymore.', 'Paw at sparkles in the sand.'],
-  ['things', 'tortoise', 'Desert Tortoise', 'Moves at exactly the right speed for the desert. Older than the road.', 'Slow, in the greener scrub.'],
+  ['things', 'arrowhead', 'Arrowhead', 'Chipped from stone a long, long time ago by somebody very patient.', 'Paw at sparkles in the sand.'],
+  ['things', 'horseshoe', 'Old Horseshoe', 'Somebody else\'s horse lost this. Yours looks at it thoughtfully.', 'Paw at sparkles in the sand.'],
+  ['things', 'harmonica', 'Harmonica', 'Left behind in an old wagon. It still plays, mostly in the key of lonesome.', 'Peek inside an old wagon.'],
+  ['things', 'ticket', 'Train Ticket', 'One ticket to somewhere, stamped and never used.', 'Ring the bell at an old gas station.'],
   ['things', 'wine', 'Big Bottle of Red', 'Two snoozing cowboys, a pile of big bottles of red from somewhere called Jura, and a puddle that smells like a very good evening. They will be fine. Probably.', 'Somebody had a long night out here.'],
-  ['things', 'fly', 'A Fly', 'A fly has decided you are its horse now. It hums along wherever you go, and glows a little at night.', 'Keep wandering.']
+  ['things', 'dustdevil', 'Dust Devil', 'Ran straight through a little whirlwind. The horse looked very proud of itself.', 'Whirlwinds out on the open sand and flats.'],
+  ['things', 'wish', 'A Wish', 'Caught a falling star at night. You do not have to say what you wished for.', 'Tap a shooting star at night.'],
+  ['things', 'fly', 'A Fly', 'A fly has decided you are its horse now. It hums along wherever you go, and glows a little at night.', 'Keep wandering.'],
+  ['places', 'windmill', 'Old Windmill', 'Still turning for nobody. The trough underneath is full of cool water.', 'Out in the scrub and dunes.'],
+  ['places', 'ghosttown', 'Ghost Town', 'A saloon, a store, and a hotel with no guests. Knock on the saloon and the piano plays.', 'Somewhere on the flats.'],
+  ['places', 'whale', 'Whale Bones', 'A whole whale, resting in the sand. Proof the sea was really here. Listen closely.', 'In the dunes, or the white sands.'],
+  ['places', 'arch', 'Stone Arch', 'The wind made a doorway. You rode right through it.', 'In red rock or cinder country. Ride under it.'],
+  ['places', 'wagon', 'Covered Wagon', 'Its travelers walked on without it. The canvas still flaps like it wants to go too.', 'Out in the open.'],
+  ['places', 'station', 'Gas Station', 'No gas, no cars, one very good bell. The sign still lights up at night.', 'Near the scrub and the flats.'],
+  ['places', 'mailbox', 'Lonely Mailbox', 'A mailbox in the middle of nowhere. Someone named M. keeps leaving letters.', 'Look for a little red flag.'],
+  ['places', 'petroglyph', 'Rock Drawings', 'A spiral, a fish, some hands, and a horse. Someone was here long before you.', 'A big boulder near red rock and Joshua trees.'],
+  ['places', 'dinobones', 'Dinosaur Bones', 'A long neck, a long tail, and a very long nap.', 'On the flats and in the dunes.'],
+  ['places', 'bell', 'Mission Bell', 'An old bell on a wooden frame. Ring it and every bird nearby takes off.', 'Near the flowers.'],
+  ['places', 'train', 'The Train', 'Comes through now and then on the old tracks. Fast, but a happy canter can keep up.', 'Follow the railroad north.']
 ];
 const ENT = {}; ENTRIES.forEach(e => ENT[e[1]] = { cat: e[0], id: e[1], name: e[2], text: e[3], hint: e[4] });
-const ESPR = { saguaro: () => SPR.sag[0], prickly: () => SPR.prickly, barrel: () => SPR.barrel, marigold: () => SPR.marigoldB, ocotillo: () => SPR.ocotillo, palm: () => SPR.palm, roadrunner: () => SPR.rr[0], quail: () => SPR.quail[0], raven: () => SPR.raven[1], hawk: () => SPR.hawk[0], owl: () => SPR.owl[0], hummingbird: () => SPR.hum[0], hoodoo: () => SPR.hoodoo, mesa: () => mesaSprite(40, 12, 12, 5), petlog: () => SPR.log, desertrose: () => SPR.rose, obsidian: () => SPR.obsidian, geode: () => SPR.geode, shell: () => SPR.shell, fossilfish: () => SPR.fossil, skull: () => SPR.skull, spur: () => SPR.spur, tortoise: () => SPR.tortoise[0], wine: () => SPR.bottle, fly: () => pix(9, 7, P => { P.ell(4.5, 4, 1.6, 1.3, '#2a2420'); P.ell(3, 2.4, 1.4, 1, '#d8ecff'); P.ell(6, 2.4, 1.4, 1, '#d8ecff'); P.set(5.6, 3.6, '#c0392b'); }, null) };
+const ESPR = {
+  saguaro: () => SPR.sag[0], prickly: () => SPR.prickly, barrel: () => SPR.barrel, marigold: () => SPR.marigoldB, ocotillo: () => SPR.ocotillo, palm: () => SPR.palm,
+  joshua: () => SPR.joshua[1], yucca: () => SPR.yucca, poppy: () => SPR.poppy, lupine: () => SPR.lupine, lily: () => SPR.lily,
+  roadrunner: () => SPR.rr[0], quail: () => SPR.quail[0], wrens: () => SPR.wren[0], raven: () => SPR.raven[1], hawk: () => SPR.hawk[0], owl: () => SPR.owl[0], hummingbird: () => SPR.hum[0],
+  wildhorses: () => herdSet(2).walk[2], coyote: () => SPR.coyote[1], bighorn: () => SPR.bighorn[0], jackrabbit: () => SPR.rabbit[0], lizard: () => SPR.lizard[0], scorpion: () => SPR.scorp[0], tortoise: () => SPR.tortoise[0],
+  hoodoo: () => SPR.hoodoo, mesa: () => mesaSprite(40, 12, 12, 5), petlog: () => SPR.log, desertrose: () => SPR.rose, obsidian: () => SPR.obsidian, geode: () => SPR.geode, selenite: () => SPR.selenite, lavarock: () => SPR.lavarock, cindercone: () => SPR.cindercone,
+  shell: () => SPR.shell, fossilfish: () => SPR.fossil, skull: () => SPR.skull, spur: () => SPR.spur, arrowhead: () => SPR.arrowhead, horseshoe: () => SPR.horseshoe, harmonica: () => SPR.harmonica, ticket: () => SPR.ticket, wine: () => SPR.bottle, dustdevil: () => SPR.devilIcon, wish: () => SPR.starIcon,
+  fly: () => pix(9, 7, P => { P.ell(4.5, 4, 1.6, 1.3, '#2a2420'); P.ell(3, 2.4, 1.4, 1, '#d8ecff'); P.ell(6, 2.4, 1.4, 1, '#d8ecff'); P.set(5.6, 3.6, '#c0392b'); }, null),
+  windmill: () => SPR.lm_windmill, ghosttown: () => SPR.lm_saloon, whale: () => SPR.lm_wskull, arch: () => archIcon(), wagon: () => SPR.lm_wagon, station: () => SPR.lm_station, mailbox: () => SPR.lm_mailbox, petroglyph: () => SPR.lm_glyph, dinobones: () => SPR.lm_dskull, bell: () => SPR.lm_bell, train: () => SPR.loco[0]
+};
+
 const EIMG = {};
 function entryImg(id) {
   if (EIMG[id]) return EIMG[id];
@@ -579,16 +931,18 @@ function entryImg(id) {
 }
 
 /* ============================== state ============================== */
-const S = { x: 0, y: 0, hour: 8.2, day: 1, found: {}, rings: [], dug: {}, name: '', river: false, fly: false, rainSeen: false, played: 0 };
-function save() { store.set({ x: Math.round(H.x), y: Math.round(H.y), hour: S.hour, day: S.day, found: S.found, rings: RINGS.map(r => r.found), dug: S.dug, name: S.name, river: S.river, fly: S.fly, rainSeen: S.rainSeen, played: S.played }); }
+const S = { x: 0, y: 0, hour: 8.2, day: 1, found: {}, rings: [], dug: {}, name: '', river: false, fly: false, rainSeen: false, played: 0, letters: 0, mail: {}, wishes: 0, races: 0, regions: {}, curRegion: '', dist: 0, ranHerd: 0 };
+let seen = new Set(), trail = [];
+function save() { store.set({ x: Math.round(H.x), y: Math.round(H.y), hour: S.hour, day: S.day, found: S.found, rings: RINGS.map(r => r.found), dug: S.dug, name: S.name, river: S.river, fly: S.fly, rainSeen: S.rainSeen, played: S.played, letters: S.letters, mail: S.mail, wishes: S.wishes, races: S.races, regions: S.regions, dist: Math.round(S.dist), ranHerd: S.ranHerd, seen: Array.from(seen).join(';'), trail }); }
 function load() {
   const s = store.get(); if (!s) return false;
-  Object.assign(S, { hour: s.hour ?? 8.2, day: s.day || 1, found: s.found || {}, dug: s.dug || {}, name: s.name || '', river: !!s.river, fly: !!s.fly, rainSeen: !!s.rainSeen, played: s.played || 0 });
+  Object.assign(S, { hour: s.hour ?? 8.2, day: s.day || 1, found: s.found || {}, dug: s.dug || {}, name: s.name || '', river: !!s.river, fly: !!s.fly, rainSeen: !!s.rainSeen, played: s.played || 0, letters: s.letters || 0, mail: s.mail || {}, wishes: s.wishes || 0, races: s.races || 0, regions: s.regions || {}, dist: s.dist || 0, ranHerd: s.ranHerd || 0 });
+  if (s.seen) seen = new Set(s.seen.split(';')); if (Array.isArray(s.trail)) trail = s.trail;
   (s.rings || []).forEach((f, i) => { if (RINGS[i]) RINGS[i].found = !!f; });
   H.x = s.x || 0; H.y = s.y || 0; return true;
 }
 
-const H = { x: 0, y: 0, vx: 0, vy: 0, face: 1, view: 'side', anim: 0, holdT: 0, idleT: 0, state: 'free', stT: 0, z: 0, vz: 0, blinkT: 2, blink: 0, tp: 0, target: null, inWater: false, gait: 'idle', stepAcc: 0, grazeCD: 6 };
+const H = { x: 0, y: 0, vx: 0, vy: 0, face: 1, view: 'side', anim: 0, holdT: 0, idleT: 0, state: 'free', stT: 0, z: 0, vz: 0, blinkT: 2, blink: 0, tp: 0, target: null, inWater: false, gait: 'idle', stepAcc: 0, grazeCD: 6, biome: 1, wetT: 0, shakeIn: 0, shakeT: 0 };
 const input = { x: 0, y: 0, run: false, keys: new Set() };
 let cam = { x: 0, y: 0 }, mode = 'title', cine = null, T = 0;
 const W = { rain: 0, rainTarget: 0, rainT: 0, nextRain: 140, bloom: 0, rainbow: 0, wind: 1, clouds: [] };
@@ -613,7 +967,7 @@ function resize() {
 
 /* ============================== audio ============================== */
 let AC = null, master, musicBus, sfxBus, ambBus, noiseBuf, windSrc, windF, windG, rainG, rainF, KS = {}, muted = store.mute();
-const NOTE = { E2: 82.41, 'F#2': 92.5, A2: 110, B2: 123.47, D3: 146.83, E3: 164.81, 'F#3': 185, G3: 196, A3: 220, B3: 246.94, D4: 293.66, E4: 329.63, 'F#4': 369.99, G4: 392, A4: 440, B4: 493.88, D5: 587.33, E5: 659.26, G5: 783.99, A5: 880, B5: 987.77 };
+const NOTE = { G2: 98, C3: 130.81, C4: 261.63, E2: 82.41, 'F#2': 92.5, A2: 110, B2: 123.47, D3: 146.83, E3: 164.81, 'F#3': 185, G3: 196, A3: 220, B3: 246.94, D4: 293.66, E4: 329.63, 'F#4': 369.99, G4: 392, A4: 440, B4: 493.88, D5: 587.33, E5: 659.26, G5: 783.99, A5: 880, B5: 987.77 };
 function ksBuffer(f, dur, damp, soft) {
   const sr = AC.sampleRate, n = Math.floor(sr * dur), b = AC.createBuffer(1, n, sr), d = b.getChannelData(0);
   const N = Math.max(2, Math.round(sr / f)), ring = new Float32Array(N);
@@ -645,18 +999,19 @@ function audioInit() {
 function pluck(note, t, vel, pan) { if (!AC || !KS[note]) return; const s = AC.createBufferSource(); s.buffer = KS[note]; const g = AC.createGain(); g.gain.value = vel; let node = g; if (AC.createStereoPanner) { const p = AC.createStereoPanner(); p.pan.value = pan || 0; g.connect(p); node = p; } s.connect(g); node.connect(musicBus); s.start(t); }
 function tone(f, d, type, v, f2, t0, bus) { if (!AC) return; const t = AC.currentTime + (t0 || 0); const o = AC.createOscillator(), g = AC.createGain(); o.type = type || 'sine'; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g); g.connect(bus || sfxBus); o.start(t); o.stop(t + d + .05); }
 function noise(d, v, fc, type, t0) { if (!AC) return; const t = AC.currentTime + (t0 || 0); const s = AC.createBufferSource(); s.buffer = noiseBuf; const f = AC.createBiquadFilter(); f.type = type || 'lowpass'; f.frequency.value = fc; const g = AC.createGain(); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); s.connect(f); f.connect(g); g.connect(sfxBus); s.start(t, Math.random() * 1.5); s.stop(t + d + .05); }
+function reed(f, d, t0) { if (!AC) return; const t = AC.currentTime + t0; const o = AC.createOscillator(); o.type = 'square'; o.frequency.value = f; const l = AC.createOscillator(); l.frequency.value = 5.5; const lg = AC.createGain(); lg.gain.value = f * .012; l.connect(lg); lg.connect(o.frequency); const fl = AC.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = 1300; fl.Q.value = 1.2; const g = AC.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.05, t + .05); g.gain.setValueAtTime(.05, t + d * .8); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(fl); fl.connect(g); g.connect(sfxBus); o.start(t); l.start(t); o.stop(t + d + .05); l.stop(t + d + .05); }
 function snore(v) { if (!AC) return; const t = AC.currentTime; const s = AC.createBufferSource(); s.buffer = noiseBuf; const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(220, t); f.frequency.linearRampToValueAtTime(420, t + .7); const g = AC.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.09 * v + .001, t + .5); g.gain.exponentialRampToValueAtTime(.0001, t + 1.1); s.connect(f); f.connect(g); g.connect(sfxBus); s.start(t, Math.random()); s.stop(t + 1.2); }
 const sfx = {
   hoof(water, g) { if (water) noise(.09, .1, 1800, 'highpass'); else noise(.05, g === 'canter' ? .12 : .08, g === 'canter' ? 900 : 650); },
-  whinny() {
-    if (!AC) return; const t = AC.currentTime, k = rand(.9, 1.12);
+  whinny(kk, dl, vol) {
+    if (!AC) return; const t = AC.currentTime + (dl || 0), k = kk || rand(.9, 1.12), v = vol || .2;
     const o = AC.createOscillator(); o.type = 'sawtooth';
     o.frequency.setValueAtTime(480 * k, t); o.frequency.linearRampToValueAtTime(980 * k, t + .14); o.frequency.linearRampToValueAtTime(820 * k, t + .45); o.frequency.linearRampToValueAtTime(560 * k, t + .75); o.frequency.linearRampToValueAtTime(380 * k, t + .95);
     const l = AC.createOscillator(); l.frequency.value = 23; const lg = AC.createGain(); lg.gain.value = 42 * k; l.connect(lg); lg.connect(o.frequency);
-    const g = AC.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.2, t + .05); g.gain.setValueAtTime(.18, t + .6); g.gain.exponentialRampToValueAtTime(.0001, t + 1.0);
+    const g = AC.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + .05); g.gain.setValueAtTime(v * .9, t + .6); g.gain.exponentialRampToValueAtTime(.0001, t + 1.0);
     for (const [fc, gv] of [[1100, 1], [2500, .5]]) { const f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = fc * k; f.Q.value = 3; const fg = AC.createGain(); fg.gain.value = gv; o.connect(f); f.connect(fg); fg.connect(g); }
     g.connect(sfxBus); o.start(t); l.start(t); o.stop(t + 1.05); l.stop(t + 1.05);
-    noise(.25, .12, 800, 'bandpass', 1.0);
+    noise(.25, .12 * v / .2 + .001, 800, 'bandpass', (dl || 0) + 1.0);
   },
   snort() { noise(.22, .14, 700, 'bandpass'); noise(.12, .08, 500, 'bandpass', .22); },
   discover() { ['E5', 'G5', 'B5'].forEach((n, i) => pluck(n, AC ? AC.currentTime + i * .09 : 0, .5, .3)); },
@@ -669,13 +1024,52 @@ const sfx = {
   paw() { noise(.12, .14, 500); },
   pop() { pluck('B4', AC ? AC.currentTime : 0, .4, 0); pluck('E5', AC ? AC.currentTime + .08 : 0, .4, 0); },
   strum(ch) { if (!AC) return; const t = AC.currentTime; CHORDS[ch].forEach((n, i) => pluck(n, t + i * .028, .38, -.4 + i * .16)); },
-  splash() { noise(.25, .14, 1600, 'highpass'); }
+  splash() { noise(.25, .14, 1600, 'highpass'); },
+  hoofS(s, g) {
+    const v = g === 'canter' ? 1.25 : 1;
+    switch (s) {
+      case 'water': noise(.09, .1, 1800, 'highpass'); break;
+      case 'wood': tone(200, .06, 'triangle', .1 * v, 150); noise(.03, .05, 2600, 'bandpass'); break;
+      case 'rail': tone(1500, .03, 'square', .015); noise(.04, .06, 900); break;
+      case 'stone': tone(340, .05, 'triangle', .07 * v, 230); noise(.035, .05, 1600, 'bandpass'); break;
+      case 'crunch': noise(.07, .11 * v, 1400, 'bandpass'); noise(.04, .06, 2800, 'bandpass', .025); break;
+      case 'soft': noise(.09, .06 * v, 420); break;
+      case 'crust': noise(.05, .09 * v, 2000, 'bandpass'); break;
+      default: noise(.05, g === 'canter' ? .12 : .08, g === 'canter' ? 900 : 650);
+    }
+  },
+  creak() { tone(110, .5, 'sawtooth', .015, 92); },
+  knock() { for (let i = 0; i < 3; i++) { tone(150, .07, 'triangle', .14, 110, i * .16); noise(.04, .08, 900, 'bandpass', i * .16); } },
+  piano() { const nt = [523.25, 659.25, 783.99, 659.25, 587.33, 698.46, 880, 698.46, 523.25, 659.25, 783.99, 1046.5]; nt.forEach((f, i) => { tone(f, .35, 'triangle', .05, null, .5 + i * .14 + (i % 2) * .03); tone(f / 2, .3, 'triangle', .03, null, .5 + i * .14); }); },
+  whale() { tone(140, 2.6, 'sine', .09, 260, 0); tone(260, 1.8, 'sine', .05, 190, 1.6); tone(320, 2.2, 'sine', .04, 410, .9); },
+  harmonica() { let t0 = 0; for (const [f, d] of [[392, .4], [440, .3], [493.9, .6], [440, .3], [392, .8]]) { reed(f, d, t0); t0 += d * .9; } },
+  ding() { tone(1760, 1.2, 'sine', .08); tone(2637, .8, 'sine', .04); },
+  bell() { [1, 2.0, 2.42, 3.0, 4.18].forEach((m, i) => tone(196 * m, 4 - i * .5, 'sine', .07 / (i + 1) + .01)); noise(.06, .1, 1200, 'bandpass'); },
+  whistle(n) { for (let k = 0; k < (n || 1); k++) { tone(415, .9, 'sawtooth', .025, 400, k * 1.05); tone(523, .9, 'sawtooth', .02, 505, k * 1.05); tone(622, .9, 'sawtooth', .015, 600, k * 1.05); } },
+  chug(v) { noise(.09, .1 * v + .002, 420); },
+  howl() { tone(520, 2.2, 'sine', .07, 760, 0); tone(760, 1.2, 'sine', .05, 600, 1.2); },
+  flutter() { for (let i = 0; i < 9; i++) noise(.05, .05, 3500, 'highpass', i * .035); },
+  shutter() { noise(.03, .2, 3000, 'highpass'); noise(.05, .12, 1500, 'bandpass', .07); },
+  wish() { if (!AC) return; ['B4', 'E5', 'G5', 'B5'].forEach((n, i) => pluck(n, AC.currentTime + i * .07, .32, .4)); },
+  shake() { for (let i = 0; i < 6; i++) noise(.06, .07, 1100, 'bandpass', i * .06); },
+  paper() { noise(.08, .08, 4000, 'highpass'); noise(.1, .06, 3000, 'highpass', .12); },
+  swirl() { noise(.8, .1, 700, 'bandpass'); },
+  cricket() { for (let i = 0; i < 3; i++) tone(4300, .03, 'sine', .012, null, i * .06); }
 };
 // music: slow fingerpicking over two chords, E minor and D6/9 over F#
-const CHORDS = [['E2', 'B2', 'E3', 'G3', 'B3', 'E4'], ['F#2', 'A2', 'D3', 'A3', 'B3', 'E4']];
+const CHORDSETS = {
+  home: [['E2', 'B2', 'E3', 'G3', 'B3', 'E4'], ['F#2', 'A2', 'D3', 'A3', 'B3', 'E4']],
+  red: [['E2', 'B2', 'E3', 'G3', 'B3', 'E4'], ['C3', 'G3', 'C4', 'E4', 'G4', 'B4']],
+  bloom: [['G2', 'D3', 'G3', 'B3', 'D4', 'G4'], ['F#2', 'A2', 'D3', 'A3', 'D4', 'F#4']],
+  pale: [['E3', 'B3', 'E4', 'F#4', 'G4', 'B4'], ['C3', 'G3', 'B3', 'E4', 'G4', 'B4']],
+  ash: [['E2', 'B2', 'E3', 'G3', 'B3', 'D4'], ['C3', 'G3', 'C4', 'E4', 'G4', 'D4']]
+};
+const CHIMESETS = { home: ['B4', 'D5', 'E5', 'G4', 'A4', 'E5', 'G5'], red: ['E5', 'G4', 'B4', 'D5'], bloom: ['B4', 'D5', 'G5', 'A5', 'G4', 'D5'], pale: ['B5', 'G5', 'E5', 'F#4', 'B4'], ash: ['E4', 'G4', 'B4', 'D4'] };
+const BIOME_MUS = ['home', 'home', 'home', 'pale', 'red', 'red', 'bloom', 'pale', 'ash'];
+const CHORDS = CHORDSETS.home;
 const PATTERN = [0, 4, 2, 5, 1, 4, 3, 5];
 const CHIME = ['B4', 'D5', 'E5', 'G4', 'A4', 'E5', 'G5'];
-const mus = { next: 0, step: 0, lvl: 0 };
+const mus = { next: 0, step: 0, lvl: 0, set: 'home' };
 function musicTick() {
   if (!AC || AC.state !== 'running') return;
   const target = mode === 'title' ? .6 : (cine ? 1 : .85) * (1 - W.rain * .35);
@@ -683,14 +1077,15 @@ function musicTick() {
   const bpm = 66, e8 = 60 / bpm / 2;
   if (mus.next < AC.currentTime) mus.next = AC.currentTime + .05;
   while (mus.next < AC.currentTime + .2) {
-    const st = mus.step, bar = (st >> 3), chord = CHORDS[bar & 1], i = st & 7;
+    const st0 = mus.step, i = st0 & 7; if (i === 0 && (st0 & 15) === 0) mus.set = BIOME_MUS[H.biome] || 'home';
+    const st = st0, bar = (st >> 3), chord = CHORDSETS[mus.set][bar & 1];
     const night = nightAmt();
     const t = mus.next + rand(-.008, .012);
-    if (!(night > .6 && (i === 3 || i === 7) && R() < .5)) {
+    if (!(night > .6 && (i === 3 || i === 7) && R() < .5) && !(mus.set === 'ash' && PATTERN[i] > 1 && R() < .35)) {
       const ni = PATTERN[i], bass = ni < 2;
       pluck(chord[ni], t, (bass ? .42 : .26) * mus.lvl * rand(.85, 1.05), bass ? -.15 : (ni - 3) * .18);
     }
-    if (i === 6 && (bar % 2 === 1) && R() < .45) pluck(pick(CHIME), t + e8 * .5, .16 * mus.lvl, rand(-.6, .6));
+    if (i === 6 && (bar % 2 === 1) && R() < .45) pluck(pick(CHIMESETS[mus.set]), t + e8 * .5, .16 * mus.lvl, rand(-.6, .6));
     if (cine && i % 2 === 0) pluck(pick(['E5', 'B5', 'G5', 'D5']), t + .03, .14, rand(-.7, .7));
     mus.next += e8; mus.step = (mus.step + 1) % 64;
   }
@@ -740,35 +1135,41 @@ function discover(id, x, y) {
 
 /* ============================== particles ============================== */
 function part(x, y, vx, vy, life, c, kind, g) { if (parts.length > 300) parts.shift(); parts.push({ x, y, vx, vy, life, max: life, c, kind: kind || 'dot', g: g == null ? 0 : g, z: 0 }); }
-function dust(x, y, n, s) { for (let i = 0; i < n; i++) part(x + rand(-3, 3), y + rand(-1, 1), rand(-8, 8) - H.vx * .15 * s, rand(-10, -3), rand(.35, .7), R() < .5 ? '#f6dcb4' : '#e8c494', 'dust', 20); }
+function dust(x, y, n, s, bb) { const cs = dustCols(bb == null ? H.biome : bb); for (let i = 0; i < n; i++) part(x + rand(-3, 3), y + rand(-1, 1), rand(-8, 8) - H.vx * .15 * s, rand(-10, -3), rand(.35, .7), R() < .5 ? cs[0] : cs[1], 'dust', 20); }
 
 /* ============================== critters ============================== */
 function spawnCritters(dt) {
   if (mode !== 'play') return;
-  spawnCritters.t = (spawnCritters.t || 0) - dt; if (spawnCritters.t > 0) return; spawnCritters.t = 1.6;
-  for (let i = critters.length - 1; i >= 0; i--) if (dist(critters[i].x, critters[i].y, H.x, H.y) > 300 && critters[i].type !== 'hawk') critters.splice(i, 1);
+  spawnCritters.t = (spawnCritters.t || 0) - dt; if (spawnCritters.t > 0) return; spawnCritters.t = 1.5;
+  for (let i = critters.length - 1; i >= 0; i--) if (dist(critters[i].x, critters[i].y, H.x, H.y) > 320 && critters[i].type !== 'hawk') critters.splice(i, 1);
   const n = nightAmt(), count = t => critters.filter(c => c.type === t).length;
-  if (critters.length > 12) return;
+  if (critters.length > 14) return;
   const a = R() * TAU, d = rand(150, 210), x = H.x + Math.cos(a) * d, y = H.y + Math.sin(a) * d * .8;
-  const b = biomeAt(x, y);
+  const b = biomeAt(x, y), isB = (...bs) => bs.includes(b), meadow = H.biome === 6;
   const opts = [];
   if (n < .5) {
-    if ((b === 1 || b === 2) && count('quail') < 1) opts.push('quail');
-    if ((b === 0 || b === 1) && count('roadrunner') < 1) opts.push('roadrunner');
-    if ((b === 1 || b === 2 || b === 0) && count('rabbit') < 2) opts.push('rabbit');
-    if ((b === 3 || b === 4) && count('lizard') < 2) opts.push('lizard');
-    if (b === 2 && count('tortoise') < 1) opts.push('tortoise');
+    if (isB(1, 2, 5, 6) && count('quail') < 1) opts.push('quail');
+    if (isB(0, 1, 3, 5) && count('roadrunner') < 1) opts.push('roadrunner');
+    if (isB(0, 1, 2, 5, 6, 7) && count('rabbit') < 2) opts.push('rabbit');
+    if (isB(3, 4, 7, 8) && count('lizard') < 2) opts.push('lizard');
+    if (isB(2, 5, 6) && count('tortoise') < 1) opts.push('tortoise');
+    if (isB(1, 2, 5, 6, 0) && count('flock') < 1) opts.push('flock', 'flock');
+    if (isB(4, 8) && count('bighorn') < 1) opts.push('bighorn', 'bighorn');
     if (count('raven') < 1 && R() < .4) opts.push('raven');
     if (count('hawk') < 1 && R() < .5) opts.push('hawk');
-    if (W.bloom > 0 && count('hum') < 2) opts.push('hum');
-    if (W.bloom > 0 && count('butter') < 5) opts.push('butter', 'butter');
-  } else {
+    if ((W.bloom > 0 || meadow) && count('hum') < 2) opts.push('hum');
+    if ((W.bloom > 0 || meadow) && count('butter') < (meadow ? 8 : 5)) opts.push('butter', 'butter', 'butter');
+  }
+  if (n > .3 && count('coyote') < 1 && R() < .5) opts.push('coyote');
+  if (n >= .5) {
     if (count('owl') < 1) opts.push('owl');
     if (count('rabbit') < 1) opts.push('rabbit');
     if (count('moth') < 6) opts.push('moth', 'moth');
+    if (isB(0, 3, 4, 7, 8) && count('scorp') < 3) opts.push('scorp', 'scorp');
   }
   if (!opts.length) return;
   const type = pick(opts);
+  if ((type === 'flock' || type === 'bighorn' || type === 'coyote' || type === 'scorp' || type === 'tortoise') && blocked(x, y, 2)) return;
   if (type === 'quail') { const fam = { type: 'quail', x, y, vx: 0, vy: 0, t: 0, dir: R() * TAU, flee: 0, kids: [] }; for (let k = 0; k < 3; k++) fam.kids.push({ x: x - 6 * (k + 1), y: y + rand(-2, 2) }); critters.push(fam); }
   else if (type === 'roadrunner') { const dir = R() < .5 ? 1 : -1; critters.push({ type, x: H.x - dir * 170, y: H.y + rand(-60, 60), vx: dir * 95, vy: 0, t: 0, stopT: rand(.8, 1.6), stopped: 0 }); }
   else if (type === 'rabbit') critters.push({ type, x, y, vx: 0, vy: 0, t: 0, z: 0, vz: 0, hop: 0 });
@@ -779,7 +1180,11 @@ function spawnCritters(dt) {
   else if (type === 'hum') critters.push({ type, x: H.x + rand(-80, 80), y: H.y + rand(-60, 60), vx: 0, vy: 0, t: 0, z: 10, tx: 0, ty: 0, k: 0 });
   else if (type === 'butter') critters.push({ type, x: H.x + rand(-90, 90), y: H.y + rand(-70, 70), vx: 0, vy: 0, t: R() * 9, z: 8, c: (R() * 4) | 0 });
   else if (type === 'moth') critters.push({ type, x: H.x + rand(-90, 90), y: H.y + rand(-70, 70), t: R() * 9, z: 10 });
-  else if (type === 'owl') { const sg = []; forObjsNear(H.x, H.y, 170, o => { if (o.kind === 'saguaro' && dist(o.x, o.y, H.x, H.y) > 50) sg.push(o); }); if (sg.length) { const o = pick(sg); critters.push({ type, x: o.x, y: o.y + .1, perchH: o.spr.height - 2, t: 0, blinkT: 2 }); } }
+  else if (type === 'owl') { const sg = []; forObjsNear(H.x, H.y, 170, o => { if ((o.kind === 'saguaro' || o.kind === 'joshua') && dist(o.x, o.y, H.x, H.y) > 50) sg.push(o); }); if (sg.length) { const o = pick(sg); critters.push({ type, x: o.x, y: o.y + .1, perchH: o.spr.height - 2, t: 0, blinkT: 2 }); } }
+  else if (type === 'flock') { const fl = { type, x, y, t: 0, burst: 0, birds: [] }; const nb = 5 + (R() * 4 | 0); for (let k = 0; k < nb; k++) fl.birds.push({ x: x + rand(-14, 14), y: y + rand(-8, 8), z: 0, vx: 0, vy: 0, vz: 0, ph: R() * 9, peck: R() * 2 }); critters.push(fl); }
+  else if (type === 'bighorn') critters.push({ type, x, y, vx: 0, vy: 0, t: 0, flee: 0, face: R() < .5 ? 1 : -1 });
+  else if (type === 'coyote') critters.push({ type, x, y, vx: 0, vy: 0, t: 0, howl: 0, did: 0, st: 'sit', face: x < H.x ? 1 : -1 });
+  else if (type === 'scorp') critters.push({ type, x, y, vx: rand(-6, 6), vy: rand(-3, 3), t: 0 });
 }
 function updCritters(dt) {
   const hs = Math.hypot(H.vx, H.vy);
@@ -806,23 +1211,53 @@ function updCritters(dt) {
         if (dH < 38 && c.hop <= 0 && hs > 8) { const a = Math.atan2(c.y - H.y, c.x - H.x) + rand(-.5, .5); c.vx = Math.cos(a) * 60; c.vy = Math.sin(a) * 40; c.hop = 1.2; }
         if (c.hop > 0) { c.hop -= dt; if (c.z <= 0) { c.vz = 70; c.z = .01; } }
         if (c.z > 0) { c.vz -= 400 * dt; c.z += c.vz * dt; c.x += c.vx * dt; c.y += c.vy * dt; if (c.z <= 0) c.z = 0; }
+        if (dH < 40) discover('jackrabbit');
         break;
       }
       case 'lizard': {
         if (dH < 26 && c.dart <= 0) { c.dart = .5; const a = Math.atan2(c.y - H.y, c.x - H.x); c.vx = Math.cos(a) * 80; c.vy = Math.sin(a) * 80; }
         if (c.dart > 0) { c.dart -= dt; c.x += c.vx * dt; c.y += c.vy * dt; }
+        if (dH < 32) discover('lizard');
         break;
       }
       case 'tortoise': { c.x += c.vx * dt; c.y += c.vy * dt; if (dH < 30) discover('tortoise'); break; }
       case 'raven': { c.x += c.vx * dt; c.y += c.vy * dt; if (dH < 60) discover('raven'); if (c.t > .5 && R() < dt * .2) sfx.caw(); if (c.t > 14) { critters.splice(i, 1); continue; } break; }
       case 'hawk': { c.a += dt * .35; c.x = c.cx + Math.cos(c.a) * 58; c.y = c.cy + Math.sin(c.a) * 40; c.cx += (H.x - c.cx) * dt * .05; c.cy += (H.y - c.cy) * dt * .05; if (dH < 52) discover('hawk'); c.life -= dt; if (c.life < 0 || nightAmt() > .5) { critters.splice(i, 1); continue; } break; }
       case 'hum': {
-        c.k -= dt; if (c.k <= 0) { c.k = rand(.4, 1.2); let fl = null; forObjsNear(c.x, c.y, 90, o => { if (o.kind === 'marigold' && (!fl || R() < .4)) fl = o; }); c.tx = fl ? fl.x + rand(-4, 4) : c.x + rand(-30, 30); c.ty = fl ? fl.y - 2 : c.y + rand(-20, 20); }
+        c.k -= dt; if (c.k <= 0) { c.k = rand(.4, 1.2); let fl = null; forObjsNear(c.x, c.y, 90, o => { if ((o.kind === 'marigold' || o.kind === 'poppy' || o.kind === 'lupine' || o.kind === 'lily') && (!fl || R() < .4)) fl = o; }); c.tx = fl ? fl.x + rand(-4, 4) : c.x + rand(-30, 30); c.ty = fl ? fl.y - 2 : c.y + rand(-20, 20); }
         c.x += (c.tx - c.x) * Math.min(1, dt * 5); c.y += (c.ty - c.y) * Math.min(1, dt * 5);
-        if (dH < 40) discover('hummingbird'); if (W.bloom <= 0) { critters.splice(i, 1); continue; } break;
+        if (dH < 40) discover('hummingbird'); if (W.bloom <= 0 && H.biome !== 6) { critters.splice(i, 1); continue; } break;
       }
-      case 'butter': { c.x += Math.sin(c.t * 1.3) * 12 * dt + 5 * dt; c.y += Math.cos(c.t * .9) * 9 * dt; c.z = 8 + Math.sin(c.t * 3) * 3; if (W.bloom <= 0 && c.t > 5) { critters.splice(i, 1); continue; } break; }
+      case 'butter': { c.x += Math.sin(c.t * 1.3) * 12 * dt + 5 * dt; c.y += Math.cos(c.t * .9) * 9 * dt; c.z = 8 + Math.sin(c.t * 3) * 3; if (W.bloom <= 0 && c.t > 5 && H.biome !== 6) { critters.splice(i, 1); continue; } break; }
       case 'moth': { c.x += Math.sin(c.t * 1.7) * 10 * dt; c.y += Math.cos(c.t * 1.3) * 8 * dt; c.z = 10 + Math.sin(c.t * 2.2) * 4; if (nightAmt() < .3) { critters.splice(i, 1); continue; } break; }
+      case 'flock': {
+        if (!c.burst) {
+          for (const bd of c.birds) { bd.ph += dt; if (bd.ph > 6) { bd.ph = 0; bd.x += rand(-3, 3); bd.y += rand(-2, 2); } bd.peck = (bd.peck + dt * 2.2) % 2; }
+          if (dH < 44 && hs > 22) burstFlock(c);
+          if (dH < 70 && c.t % 4 < dt && R() < .5) sfx.chirp();
+        } else {
+          c.burst += dt;
+          for (const bd of c.birds) { bd.vz += (12 - bd.vz) * dt; bd.z += bd.vz * dt; bd.x += bd.vx * dt; bd.y += bd.vy * dt; }
+          if (c.burst > 5) { critters.splice(i, 1); continue; }
+        }
+        break;
+      }
+      case 'bighorn': {
+        if (dH < 55 && c.flee <= 0 && hs > 10) { c.flee = 1.3; const a = Math.atan2(c.y - H.y, c.x - H.x); c.vx = Math.cos(a) * 55; c.vy = Math.sin(a) * 40; c.face = c.vx > 0 ? 1 : -1; }
+        if (c.flee > 0) { c.flee -= dt; const p = collide(c.x + c.vx * dt, c.y + c.vy * dt, 3); c.x = p.x; c.y = p.y; }
+        if (dH < 75) discover('bighorn');
+        break;
+      }
+      case 'coyote': {
+        if (c.st === 'sit' && dH < 165 && !c.did) { c.st = 'howl'; c.howl = 2.6; c.did = 1; sfx.howl(); }
+        if (c.st === 'howl') { c.howl -= dt; if (c.howl <= 0) c.st = 'sit'; }
+        if (c.did && dH < 180) discover('coyote');
+        if (dH < 46 && c.st !== 'trot') { c.st = 'trot'; const a = Math.atan2(c.y - H.y, c.x - H.x); c.vx = Math.cos(a) * 42; c.vy = Math.sin(a) * 30; c.face = c.vx > 0 ? 1 : -1; }
+        if (c.st === 'trot') { c.x += c.vx * dt; c.y += c.vy * dt; if (dH > 240) { critters.splice(i, 1); continue; } }
+        if (nightAmt() < .2) { critters.splice(i, 1); continue; }
+        break;
+      }
+      case 'scorp': { c.x += c.vx * dt; c.y += c.vy * dt; if (R() < dt * .5) { c.vx = rand(-6, 6); c.vy = rand(-3, 3); } if (dH < 30) discover('scorpion'); if (nightAmt() < .3) { critters.splice(i, 1); continue; } break; }
       case 'owl': { c.blinkT -= dt; if (c.blinkT < -.15) c.blinkT = rand(1.5, 4); if (dH < 46) discover('owl'); if (R() < dt * .06) sfx.hoot(); if (nightAmt() < .3) { critters.splice(i, 1); continue; } break; }
     }
   }
@@ -850,7 +1285,8 @@ function nearWater(x, y, pad) {
 }
 function collide(px, py, rad) {
   let nx = 0, ny = 0;
-  forObjsNear(px, py, 20, o => {
+  forObjsNear(px, py, 30, o => {
+    if (o.box) { const hw = o.box[0] + rad, y0 = o.y - o.box[1] - rad * .6, y1 = o.y + 1 + rad * .6; if (px > o.x - hw && px < o.x + hw && py > y0 && py < y1) { const pl = px - (o.x - hw), pr = o.x + hw - px, pt = py - y0, pb = y1 - py, mn = Math.min(pl, pr, pt, pb); if (mn === pl) { px = o.x - hw; nx -= 1; } else if (mn === pr) { px = o.x + hw; nx += 1; } else if (mn === pt) { py = y0; ny -= 1; } else { py = y1; ny += 1; } } return; }
     if (!o.r) return; const dx = px - o.x, dy = (py - o.y) * 1.3, d = Math.hypot(dx, dy), m = o.r + rad;
     if (d < m && d > .001) { px = o.x + dx / d * m; py = o.y + dy / d * m / 1.3; nx += dx / d; ny += dy / d; }
   });
@@ -859,6 +1295,7 @@ function collide(px, py, rad) {
     if (d < 1 && d > .001) { px = m.x + dx / d * ex; py = m.y + dy / d * ey; nx += dx; ny += dy; }
   }
   for (const g of RINGS) { if (Math.abs(g.x - px) > 30 || Math.abs(g.y - py) > 30) continue; for (const s of g.stones) { const dx = px - s.x, dy = (py - s.y) * 1.3, d = Math.hypot(dx, dy), m = 2.6 + rad; if (d < m && d > .001) { px = s.x + dx / d * m; py = s.y + dy / d * m / 1.3; nx += dx / d; ny += dy / d; } } }
+  if (train.on && Math.abs(py - RAILY) < 7 + rad * .5) for (const c of train.cars) if (Math.abs(px - c.cx) < c.w / 2 + rad) { const up = py < RAILY; py = RAILY + (up ? -(7 + rad * .5) : (7 + rad * .5)); ny += up ? -1 : 1; break; }
   return { x: px, y: py, nx, ny };
 }
 
@@ -881,7 +1318,9 @@ function updHorse(dt) {
   let top = input.run ? 82 : (H.holdT < 1.4 ? 30 : H.holdT < 3.4 ? 52 : 80);
   if (mag < .8) top = Math.min(top, 30 * mag / .8 + 4);
   H.inWater = waterAt(H.x, H.y);
-  if (H.inWater) top *= .55;
+  if (H.inWater) { top *= .55; H.wetT += dt; } else { if (H.wetT > .6) H.shakeIn = .35; H.wetT = 0; }
+  if (H.shakeIn > 0) { H.shakeIn -= dt; if (H.shakeIn <= 0) { H.shakeT = .6; sfx.shake(); for (let i = 0; i < 16; i++) part(H.x + rand(-9, 9), H.y - rand(8, 18), rand(-40, 40), rand(-30, -5), .6, R() < .5 ? '#cfefff' : '#ffffff', 'drop', 160); } }
+  if (H.shakeT > 0) H.shakeT -= dt;
   const tx = ix * top, ty = iy * top * .85;
   const rate = mag > .1 ? 2.6 : 4.2;
   H.vx += (tx - H.vx) * Math.min(1, rate * dt); H.vy += (ty - H.vy) * Math.min(1, rate * dt);
@@ -891,11 +1330,12 @@ function updHorse(dt) {
   if (c.nx || c.ny) { const l = Math.hypot(c.nx, c.ny); const ux = c.nx / l, uy = c.ny / l; const vn = H.vx * ux + H.vy * uy; if (vn < 0) { H.vx -= vn * ux; H.vy -= vn * uy; } if (H.target && Math.hypot(c.x - ox, c.y - oy) < .02) H.target = null; }
   H.x = c.x; H.y = c.y;
   const sp = Math.hypot(H.vx, H.vy);
+  if (mode === 'play') S.dist += sp * dt * .2;
   H.gait = sp < 2.5 ? 'idle' : sp < 40 ? 'walk' : sp < 64 ? 'trot' : 'canter';
   if (Math.abs(H.vx) > 3) H.face = H.vx > 0 ? 1 : -1;
   if (sp > 3) H.view = Math.abs(H.vy) > Math.abs(H.vx) * 1.5 ? (H.vy > 0 ? 'front' : 'back') : 'side';
   const stride = { walk: 24, trot: 32, canter: 44 }[H.gait] || 24;
-  if (sp > 2.5) { const before = H.anim; H.anim += sp * dt / stride; const beats = H.gait === 'walk' ? 4 : H.gait === 'trot' ? 2 : 3; if (Math.floor(before * beats) !== Math.floor(H.anim * beats)) { sfx.hoof(H.inWater, H.gait); if (H.inWater) { for (let k = 0; k < 3; k++) part(H.x + rand(-4, 4), H.y, rand(-14, 14), rand(-30, -14), .4, R() < .5 ? '#cfefff' : '#ffffff', 'drop', 140); } else { if (H.gait === 'canter' || (H.gait === 'trot' && R() < .4)) dust(H.x - H.face * 6, H.y, H.gait === 'canter' ? 2 : 1, 1); prints.push({ x: H.x + rand(-2, 2) - H.face * 2, y: H.y + (prints.length & 1 ? 1 : -1), t: 0 }); if (prints.length > 260) prints.shift(); } } }
+  if (sp > 2.5) { const before = H.anim; H.anim += sp * dt / stride; const beats = H.gait === 'walk' ? 4 : H.gait === 'trot' ? 2 : 3; if (Math.floor(before * beats) !== Math.floor(H.anim * beats)) footfall(); }
   else H.anim += dt * .5;
   // idle life
   if (H.state === 'free' && H.gait === 'idle' && mode === 'play') { H.idleT += dt; H.grazeCD -= dt; if (H.grazeCD < 0 && H.idleT > 4) { H.grazeCD = rand(7, 14); setState('graze'); } } else H.idleT = 0;
@@ -909,11 +1349,13 @@ function whinny() {
   if (H.state !== 'hop') { setState('hop'); H.vz = 78; H.z = .1; }
   sfx.whinny();
   for (let i = 0; i < 6; i++) part(H.x + H.face * 8 + rand(-4, 4), H.y - 22, rand(-12, 12), rand(-26, -10), 1.2, pick(['#ff8fa8', '#ffd0dc']), 'heart');
-  for (const c of critters) if ((c.type === 'raven' || c.type === 'quail') && dist(c.x, c.y, H.x, H.y) < 80) { if (c.type === 'quail') c.flee = 1.2; else c.vy -= 30; }
+  for (const c of critters) { const d = dist(c.x, c.y, H.x, H.y); if ((c.type === 'raven' || c.type === 'quail') && d < 80) { if (c.type === 'quail') c.flee = 1.2; else c.vy -= 30; } if (c.type === 'flock' && d < 100) burstFlock(c); }
+  if (herd && !herd.joined && mode === 'play') { const d = dist(herd.cx, herd.cy, H.x, H.y); if (d < 210) { herd.curious = 8; herd.mem.forEach((m, i) => { if (i < 3) sfx.whinny(rand(1, 1.3), .5 + i * .35, .09 * Math.max(.3, 1 - d / 210)); m.st = 'walk'; }); } }
 }
 function action() {
   audioInit();
   const a = currentAction();
+  const lt = lmThing(); if (lt && lt.a === a) { doLM(lt); return; }
   if (a === 'Drink') { setState('drink'); sfx.drink(); setTimeout(() => { for (let i = 0; i < 4; i++) part(H.x + H.face * 12, H.y - 2, rand(-8, 8), rand(-18, -6), .6, '#cfefff', 'drop', 60); }, 300); }
   else if (a === 'Paw') { const d = nearestDig(); if (d) { setState('paw'); H.face = d.x > H.x ? 1 : -1; H.view = 'side'; sfx.paw(); setTimeout(() => dig(d), 650); } }
   else if (a === 'Nudge' || a === 'Strum' || a === 'Sniff') {
@@ -942,6 +1384,7 @@ function currentAction() {
   if (cine) return '';
   if (H.state === 'rest') return 'Get up';
   if (nearestDig()) return 'Paw';
+  const lt = lmThing(); if (lt) return lt.a;
   const cs = campThing(); if (cs) return cs.kind === 'guitar' ? 'Strum' : cs.kind === 'puddle' ? 'Sniff' : 'Nudge';
   if (nearWater(H.x + H.face * 10, H.y, 4) || waterAt(H.x, H.y)) return 'Drink';
   return 'Rest';
@@ -949,7 +1392,7 @@ function currentAction() {
 function dig(o) {
   const ch = getChunk(Math.floor(o.x / CHS), Math.floor(o.y / CHS)); ch.objs = ch.objs.filter(q => q !== o); S.dug[o.id] = 1;
   const b = biomeAt(o.x, o.y);
-  const cands = b === 0 ? ['shell', 'fossilfish', 'spur'] : b === 3 ? ['geode', 'spur', 'fossilfish'] : b === 4 ? ['geode', 'fossilfish'] : ['spur', 'fossilfish', 'geode'];
+  const cands = [['shell', 'fossilfish', 'spur', 'horseshoe'], ['spur', 'arrowhead', 'horseshoe', 'fossilfish'], ['arrowhead', 'spur', 'geode'], ['geode', 'fossilfish', 'spur'], ['geode', 'fossilfish', 'arrowhead'], ['arrowhead', 'horseshoe', 'spur'], ['arrowhead', 'horseshoe', 'shell'], ['shell', 'fossilfish', 'horseshoe'], ['geode', 'arrowhead', 'fossilfish']][b] || ['spur', 'fossilfish', 'geode'];
   const fresh = cands.filter(c => !S.found[c]); const id = fresh.length ? pick(fresh) : pick(cands);
   const spr = ESPR[id]();
   parts.push({ x: o.x, y: o.y - 2, vx: 0, vy: -28, life: 1.6, max: 1.6, kind: 'item', spr, g: 22, z: 0 });
@@ -963,9 +1406,10 @@ function dig(o) {
 let scanT = 0;
 function scanDiscoveries(dt) {
   scanT -= dt; if (scanT > 0) return; scanT = .25;
+  H.biome = biomeAt(H.x, H.y);
   forObjsNear(H.x, H.y, 40, o => {
     if (!o.disc || S.found[o.disc]) return;
-    if (o.disc === 'marigold' && W.bloom <= 0) return;
+    if (o.disc === 'marigold' && W.bloom <= 0 && o.bl !== 6) return;
     if (dist(o.x, o.y, H.x, H.y) < (o.r ? 26 : 22)) discover(o.disc);
   });
   if (!S.found.mesa) for (const m of mesasNear(H.x, H.y, 120)) { const dx = (H.x - m.x) / (m.rx + 26), dy = (H.y - m.y) / (m.ry + 26); if (dx * dx + dy * dy < 1) discover('mesa'); }
@@ -975,6 +1419,10 @@ function scanDiscoveries(dt) {
     if (d < 8) activateRing(g);
   }
   for (const cp of campsNear(H.x, H.y, 120)) if (dist(H.x, H.y, cp.x, cp.y) < 48) discover('wine');
+  for (const L of lmsNear(H.x, H.y, 160)) {
+    if (L.type === 'arch') { if (Math.abs(H.x - L.x) < 15 && Math.abs(H.y - L.y) < 8 && !L.under) { L.under = 1; discover('arch'); for (let i = 0; i < 16; i++) part(L.x + rand(-14, 14), L.y - rand(10, 40), rand(-8, 8), rand(-8, 8), 1.2, pick(['#fff6c8', '#ffffff']), 'spark'); } }
+    else if (dist(H.x, H.y, L.x, L.y) < L.rad + 26) discover(L.type);
+  }
   if (!S.fly && S.played > 35) { S.fly = true; fly.x = H.x + 40; fly.y = H.y - 40; discover('fly'); }
 }
 function activateRing(g) {
@@ -1050,6 +1498,9 @@ function update(dt) {
   updHorse(dt);
   if (mode === 'play') { spawnCritters(dt); scanDiscoveries(dt); }
   updCritters(dt); updWeather(dt);
+  updHerd(dt); updTrain(dt); updDevils(dt); updStar(dt);
+  if (mode === 'play') { checkRegion(dt); ambient(dt); seenT -= dt; if (seenT < 0) { seenT = .4; markSeen(); } }
+  if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('region').classList.remove('show'); }
   // fly companion
   if (S.fly) {
     fly.t += dt; const tx = H.x + H.face * 9 + Math.sin(fly.t * 2.3) * 7 + Math.sin(fly.t * 5.1) * 2, ty = H.y - 20 - H.z + Math.cos(fly.t * 1.7) * 5;
@@ -1064,7 +1515,7 @@ function update(dt) {
   for (let i = tumbles.length - 1; i >= 0; i--) { const t = tumbles[i]; t.vx += (22 * W.wind - t.vx) * dt * .5; t.x += t.vx * dt; t.rot += t.vx * dt / 6; t.vz -= 300 * dt; t.z += t.vz * dt; if (t.z <= 0) { t.z = 0; t.vz = rand(20, 60); } const d = dist(t.x, t.y, H.x, H.y); if (d < 8) { t.vx += (t.x - H.x) * 4 * dt * 20; t.y += (t.y - H.y) * dt * 4; } if (t.x > cam.x + LW + 80) tumbles.splice(i, 1); }
   // ghosts: during the finale, and every night after
   if (S.river && !cine && nightAmt() > .6 && ghosts.length < 10 && R() < dt * .6) spawnGhost(false);
-  for (let i = ghosts.length - 1; i >= 0; i--) { const g = ghosts[i]; g.t += dt; g.x += g.vx * dt; g.y += g.vy * dt; if (g.t > g.life || (nightAmt() < .2 && !cine)) ghosts.splice(i, 1); }
+  for (let i = ghosts.length - 1; i >= 0; i--) { const g = ghosts[i]; g.t += dt; g.x += g.vx * dt; g.y += g.vy * dt; if (g.t > g.life || (nightAmt() < .2 && !cine && !g.day)) ghosts.splice(i, 1); }
   // particles & prints
   for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life -= dt; if (p.life <= 0) { parts.splice(i, 1); continue; } p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.kind === 'dust' || p.kind === 'drop') { p.vx *= 1 - dt * 2; } }
   for (let i = prints.length - 1; i >= 0; i--) { prints[i].t += dt; if (prints[i].t > 40) prints.splice(i, 1); }
@@ -1077,7 +1528,7 @@ function update(dt) {
   if (cardTimer > 0) { cardTimer -= dt; if (cardTimer <= 0) hideCard(); }
   if (dayCardT > 0) { dayCardT -= dt; if (dayCardT <= 0) $('dayCard').classList.add('hide'); }
   if (hintT > 0) { hintT -= dt; if (hintT <= 0) $('hint').classList.add('hide'); }
-  saveT -= dt; if (saveT < 0 && mode === 'play') { saveT = 4; save(); updateHUD(); }
+  saveT -= dt; if (saveT < 0 && mode === 'play') { saveT = 6; save(); updateHUD(); }
   actT -= dt; if (actT < 0 && mode === 'play') { actT = .2; const a = currentAction(); const b = $('actBtn'); if (b.textContent !== a) b.textContent = a; b.style.visibility = a ? 'visible' : 'hidden'; }
 }
 let saveT = 4, actT = 0;
@@ -1104,8 +1555,10 @@ function render() {
   for (const o of waterBodies(cx, cy)) if (o.rx > 2) drawWater(o, cx, cy, tt, night);
   if (S.river || (cine && cine.fill > 0)) drawRiver(cx, cy, tt, night);
   for (const cp of campsNear(cx + LW / 2, cy + LH / 2, Math.max(LW, LH))) drawCampFlat(cp, cx, cy, tt);
+  const LMV = lmsNear(cx + LW / 2, cy + LH / 2, Math.max(LW, LH));
+  for (const L of LMV) drawLMFlat(L, cx, cy, tt);
   // hoofprints
-  for (const p of prints) { const a = 1 - p.t / 40; if (a <= 0) continue; b.fillStyle = 'rgba(150,100,60,' + (.28 * a).toFixed(3) + ')'; b.fillRect(Math.floor(p.x - cx), Math.floor(p.y - cy), 2, 1); }
+  for (const p of prints) { const a = 1 - p.t / 40; if (a <= 0) continue; b.fillStyle = 'rgba(' + (p.c || '150,100,60') + ',' + (.3 * a).toFixed(3) + ')'; b.fillRect(Math.floor(p.x - cx), Math.floor(p.y - cy), 2, 1); }
   // ring glow on the sand
   for (const g of RINGS) { if (g.x < cx - 60 || g.x > cx + LW + 60 || g.y < cy - 60 || g.y > cy + LH + 60) continue; if (g.found) { b.fillStyle = 'rgba(255,250,235,.12)'; ellipseFill(b, g.x - cx, g.y - cy, 15, 9); } }
   // sprites list
@@ -1116,15 +1569,22 @@ function render() {
   for (const g of RINGS) { if (g.x < cx - 60 || g.x > cx + LW + 60 || g.y < cy - 60 || g.y > cy + LH + 80) continue; for (const s of g.stones) list.push({ kind: 'stone', x: s.x, y: s.y, spr: SPR.stone[s.v] }); list.push({ kind: 'center', x: g.x, y: g.y + 1, g }); }
   for (const c of critters) if (c.type !== 'hawk' && c.type !== 'moth') list.push({ kind: 'critter', x: c.x, y: c.y, c });
   for (const t of tumbles) list.push({ kind: 'tumble', x: t.x, y: t.y, t });
+  if (herd) for (const m of herd.mem) list.push({ kind: 'herd', x: m.x, y: m.y, m });
+  if (train.on) for (const c of train.cars) list.push({ kind: 'car', x: c.cx, y: RAILY + 4, c });
+  for (const d of devils) list.push({ kind: 'devil', x: d.x, y: d.y, d });
   list.push({ kind: 'horse', x: H.x, y: H.y });
   // ground shadows
   for (const o of list) {
     if (o.kind === 'horse') { b.fillStyle = 'rgba(90,50,30,.22)'; ellipseFill(b, H.x - cx, H.y - cy, Math.max(4, 9 - H.z * .1), 2.4); continue; }
     const d = DEF[o.kind]; if (d && d.sh) { b.fillStyle = 'rgba(90,50,30,.2)'; ellipseFill(b, o.x - cx + 1, o.y - cy, d.sh, 2); }
     if (o.kind === 'critter' && o.c.z > 4) { b.fillStyle = 'rgba(90,50,30,.18)'; ellipseFill(b, o.x - cx, o.y - cy, 3, 1); }
+    if (o.kind === 'herd') { b.fillStyle = 'rgba(90,50,30,.2)'; ellipseFill(b, o.x - cx, o.y - cy, 8, 2.2); }
+    if (o.kind === 'car') { b.fillStyle = 'rgba(40,30,30,.22)'; ellipseFill(b, o.x - cx, o.y - cy, o.c.w / 2, 2.5); }
+    if (o.kind === 'devil') { b.fillStyle = 'rgba(90,50,30,.15)'; ellipseFill(b, o.x - cx, o.y - cy, 5, 1.6); }
   }
   list.sort((a, b2) => a.y - b2.y);
   for (const o of list) drawThing(o, cx, cy, tt);
+  for (const L of LMV) if (L.type === 'arch') { const x = Math.floor(L.x - cx) - 35, y = Math.floor(L.y - cy) - 51; if (x < LW && x > -80 && y < LH && y > -40) b.drawImage(SPR.lm_archTop, x, y); }
   // dig sparkles
   forObjsNear(cx + LW / 2, cy + LH / 2, Math.max(LW, LH) / 2 + 20, o => { if (o.kind !== 'dig') return; const x = Math.floor(o.x - cx), y = Math.floor(o.y - cy); b.fillStyle = 'rgba(160,110,60,.35)'; b.fillRect(x - 2, y, 5, 1); b.fillRect(x - 1, y - 1, 3, 1); const ph = (tt * 1.7 + o.t) % 2.2; if (ph < .5) { const s = ph < .25 ? 1 : 2; b.fillStyle = '#fffbe8'; b.fillRect(x, y - 3 - s, 1, s * 2 + 1); b.fillRect(x - s, y - 3, s * 2 + 1, 1); } else { b.fillStyle = '#fff3c8'; b.fillRect(x, y - 3, 1, 1); } });
   // particles
@@ -1134,6 +1594,8 @@ function render() {
     else if (p.kind === 'z') { b.globalAlpha = a * .9; b.fillStyle = p.c; b.fillRect(x, y, 3, 1); b.fillRect(x + 1, y + 1, 1, 1); b.fillRect(x, y + 2, 3, 1); b.globalAlpha = 1; }
     else if (p.kind === 'note') { b.globalAlpha = a; b.fillStyle = p.c; b.fillRect(x, y, 1, 3); b.fillRect(x - 1, y + 2, 1, 1); b.fillRect(x + 1, y, 1, 1); b.globalAlpha = 1; }
     else if (p.kind === 'item') { b.drawImage(p.spr, x - (p.spr.width >> 1), y - p.spr.height); }
+    else if (p.kind === 'smoke') { const sz = 1 + Math.floor((1 - p.life / p.max) * 4); b.globalAlpha = a * .55; b.fillStyle = p.c; b.fillRect(x - (sz >> 1), y - (sz >> 1), sz, sz); b.globalAlpha = 1; }
+    else if (p.kind === 'petal') { b.globalAlpha = a; b.fillStyle = p.c; b.fillRect(x, y, 2, 1); b.globalAlpha = 1; }
     else if (p.kind === 'ripple') { b.globalAlpha = a * .6; b.strokeStyle = p.c; const r = Math.floor((1 - p.life / p.max) * 3) + 1; b.fillStyle = p.c; b.fillRect(x - r, y, 1, 1); b.fillRect(x + r, y, 1, 1); b.fillRect(x, y - 1, 1, 1); b.globalAlpha = 1; }
     else { b.globalAlpha = a; b.fillStyle = p.c; b.fillRect(x, y, 1, 1); b.globalAlpha = 1; }
   }
@@ -1145,6 +1607,8 @@ function render() {
   if (S.fly) { const x = Math.floor(fly.x - cx), y = Math.floor(fly.y - cy); b.fillStyle = '#2a2420'; b.fillRect(x, y, 2, 1); if ((tt * 30 | 0) & 1) { b.fillStyle = 'rgba(230,245,255,.9)'; b.fillRect(x, y - 1, 1, 1); b.fillRect(x + 1, y - 1, 1, 1); } }
   // cloud shadows
   drawClouds(cx, cy, tt);
+  // wind streaks when galloping
+  if (Math.abs(H.vx) > 58 && mode === 'play') { const a = clamp((Math.abs(H.vx) - 58) / 24, 0, 1) * .3; b.fillStyle = 'rgba(255,250,240,' + a.toFixed(2) + ')'; for (let i = 0; i < 8; i++) { const y = Math.floor(hash(i, 7, 2) * LH), len = 6 + Math.floor(hash(i, 8, 2) * 10), x = Math.floor(((hash(i, 3, 4) * LW * 4 - T * H.vx * 2.4) % (LW + 40) + LW + 40) % (LW + 40)) - 20; b.fillRect(x, y, len, 1); } }
   // rain
   if (drops.length) { b.fillStyle = 'rgba(220,235,255,.55)'; for (const d of drops) { const x = Math.floor(d.x + d.t * 20), y = Math.floor(d.y + d.t * 160); b.fillRect(x, y, 1, 3); } }
   // light: multiply tint
@@ -1163,6 +1627,12 @@ function render() {
     if (S.fly) { b.globalAlpha = night; b.drawImage(GLOW.fly, Math.floor(fly.x - cx) - 14, Math.floor(fly.y - cy) - 14); b.drawImage(GLOW.tiny, Math.floor(fly.x - cx) - 4, Math.floor(fly.y - cy) - 4); b.globalAlpha = 1; }
     for (const c of critters) if (c.type === 'moth') { const x = Math.floor(c.x - cx), y = Math.floor(c.y - cy - c.z); b.globalAlpha = night * (.6 + .4 * Math.sin(c.t * 5)); b.drawImage(GLOW.moth, x - 6, y - 6); b.fillStyle = '#f4ffd8'; b.fillRect(x, y, 1, 1); b.globalAlpha = 1; }
     forObjsNear(cx + LW / 2, cy + LH / 2, Math.max(LW, LH) / 2 + 20, o => { if (o.kind === 'dig') { b.globalAlpha = night * (.4 + .4 * Math.sin(tt * 2 + o.t)); b.drawImage(GLOW.tiny, Math.floor(o.x - cx) - 4, Math.floor(o.y - cy) - 7); b.globalAlpha = 1; } });
+    for (const L of LMV) {
+      if (L.type === 'station' && Math.sin(T * 13) + Math.sin(T * 7.3) > -1.5) { b.globalAlpha = night; b.drawImage(GLOW.neon, Math.floor(L.x - 32 - cx) - 16, Math.floor(L.y - 21 - cy) - 16); b.globalAlpha = 1; }
+      if (L.type === 'ghosttown') { b.globalAlpha = night * (.75 + .25 * Math.sin(T * 3)); b.drawImage(GLOW.win, Math.floor(L.x - 12 - cx) - 5, Math.floor(L.y - 11 - cy) - 5); b.drawImage(GLOW.win, Math.floor(L.x + 11 - cx) - 5, Math.floor(L.y - 11 - cy) - 5); b.globalAlpha = 1; }
+    }
+    if (train.on) { b.globalAlpha = night; b.drawImage(GLOW.lamp, Math.floor(train.x - cx) + train.dir * 14 - 26, Math.floor(RAILY - 16 - cy) - 26); for (const c of train.cars) if (c.k === 'passcar' || c.k === 'caboose') for (let k = -2; k <= 2; k++) b.drawImage(GLOW.win, Math.floor(c.cx + k * 7 - cx) - 5, Math.floor(RAILY - 13 - cy) - 5); b.globalAlpha = 1; }
+    for (const c of critters) if (c.type === 'scorp') { b.globalAlpha = night; b.drawImage(GLOW.uv, Math.floor(c.x - cx) - 7, Math.floor(c.y - cy) - 9); b.globalAlpha = 1; }
   }
   // the stars come down to drink
   if (night > .2) {
@@ -1171,7 +1641,7 @@ function render() {
   }
   // ghost sea
   for (const g of ghosts) {
-    const a = Math.min(1, g.t / 2, (g.life - g.t) / 3) * (cine ? 1 : night) * .62; if (a <= 0) continue;
+    const a = Math.min(1, g.t / 2, (g.life - g.t) / 3) * (cine ? 1 : g.day ? Math.max(.6, night) : night) * .62; if (a <= 0) continue;
     const spr = g.type === 'whale' ? SPR.gwhale : g.type === 'jelly' ? SPR.gjelly : SPR.gfish;
     b.globalAlpha = a;
     for (const s of g.school) {
@@ -1181,6 +1651,7 @@ function render() {
     }
     b.globalAlpha = 1;
   }
+  if (star) { const a = Math.min(1, (star.life - star.t) / .5, star.t / .15) * (star.wished ? .5 : 1); const hx = star.x + star.vx * star.t, hy = star.y + star.vy * star.t, l = Math.hypot(star.vx, star.vy), ux = star.vx / l, uy = star.vy / l; for (let i = 0; i < 20; i++) { b.fillStyle = 'rgba(255,250,220,' + (a * (1 - i / 20)).toFixed(2) + ')'; b.fillRect(Math.floor(hx - ux * i * 1.3), Math.floor(hy - uy * i * 1.3), i < 2 ? 2 : 1, 1); } }
   b.globalCompositeOperation = 'source-over';
   // rainbow
   if (W.rainbow > 0) { const a = Math.min(1, W.rainbow / 4, (26 - W.rainbow) / 3) * .22; const cols = ['#ff6a6a', '#ffb05a', '#ffe66a', '#7ed87e', '#6ab8ff', '#a88aff']; const R0 = Math.max(LW, LH) * .75; for (let k = 0; k < cols.length; k++) { b.strokeStyle = cols[k]; b.globalAlpha = a; b.lineWidth = 3; b.beginPath(); b.arc(LW * .5, LH * 1.15, R0 - k * 3, Math.PI * 1.1, Math.PI * 1.9); b.stroke(); } b.globalAlpha = 1; }
@@ -1237,17 +1708,27 @@ function drawThing(o, cx, cy, tt) {
     case 'stone': return at(o.spr, o.x, o.y);
     case 'center': { const g = o.g; at(g.found ? SPR.centerDim : SPR.center, g.x, g.y + 1); return; }
     case 'tumble': { const t = o.t; b.fillStyle = 'rgba(90,50,30,.18)'; ellipseFill(b, t.x - cx, t.y - cy, 5, 1.5); at(SPR.tumble[Math.floor(t.rot) % 6 < 0 ? 0 : Math.floor(t.rot) % 6], t.x, t.y - t.z); return; }
-    case 'critter': return drawCritter(o.c, at, tt);
-    case 'marigold': return at(W.bloom > 0 ? SPR.marigoldB : SPR.marigold, o.x, o.y);
+    case 'critter': return drawCritter(o.c, at, tt, cx, cy);
+    case 'herd': return drawHerdHorse(o.m, cx, cy);
+    case 'car': { const c = o.c, spr = c.k === 'loco' ? SPR.loco[(T * 7 | 0) & 1] : SPR[c.k]; return at(spr, c.cx, RAILY + 4, train.dir < 0); }
+    case 'devil': { const d = o.d, a = clamp(Math.min(d.t / 2, (d.life - d.t) / 2), 0, 1), cs = dustCols(H.biome); b.globalAlpha = .8 * a; for (let k = 0; k < 22; k++) { const ang = T * 9 + k * .75, h = k * 1.5, r = 1.5 + k * .42; b.fillStyle = cs[k & 1]; b.fillRect(Math.floor(d.x - cx + Math.cos(ang) * r), Math.floor(d.y - cy - h + Math.sin(ang) * r * .3), k > 14 ? 1 : 2, 1); } b.globalAlpha = 1; return; }
+    case 'lm_windmill': { at(o.spr, o.x, o.y); drawBlades(Math.floor(o.x - cx), Math.floor(o.y - cy) - 49); return; }
+    case 'lm_mailbox': return at(o.lm && S.mail[o.lm.id] ? SPR.lm_mailboxD : SPR.lm_mailbox, o.x, o.y);
+    case 'poppy': case 'lupine': case 'lily': { const sway = Math.sin(tt * 1.4 + o.t) * W.wind; return at(o.spr, o.x + (Math.abs(sway) > 1.2 ? Math.sign(sway) : 0), o.y); }
+    case 'marigold': return at(W.bloom > 0 || o.bl === 6 ? SPR.marigoldB : SPR.marigold, o.x, o.y);
     case 'dig': return;
     case 'sage': case 'tuft': { const sway = Math.sin(tt * 1.6 + o.t) * W.wind; if (Math.abs(sway) > 1.1 && o.kind === 'tuft') { at(o.spr, o.x + (sway > 0 ? 1 : -1), o.y); return; } return at(o.spr, o.x, o.y); }
     case 'reed': { const sway = Math.sin(tt * 1.3 + o.t) * W.wind; return at(o.spr, o.x + (Math.abs(sway) > 1 ? Math.sign(sway) : 0), o.y); }
     default: if (o.spr) return at(o.spr, o.x, o.y, o.kind === 'saguaro' && (o.v & 4));
   }
 }
-function drawCritter(c, at, tt) {
+function drawCritter(c, at, tt, cx, cy) {
   const f = (tt * 8 | 0) & 1;
   switch (c.type) {
+    case 'flock': { for (const bd of c.birds) { if (bd.z > 1) { bctx.fillStyle = 'rgba(90,50,30,.15)'; bctx.fillRect(Math.floor(bd.x - cx), Math.floor(bd.y - cy), 2, 1); at(((tt * 14 + bd.ph) | 0) & 1 ? SPR.wren[2] : SPR.wrenUp, bd.x, bd.y - bd.z, bd.vx < 0); } else at(SPR.wren[bd.peck > 1.6 ? 1 : 0], bd.x, bd.y, bd.ph > 4.5); } return; }
+    case 'bighorn': return at(SPR.bighorn[c.flee > 0 ? (tt * 8 | 0) & 1 : 0], c.x, c.y, c.face < 0);
+    case 'coyote': return at(SPR.coyote[c.st === 'trot' ? 2 : c.st === 'howl' ? 1 : 0], c.x, c.y, c.face < 0);
+    case 'scorp': return at(SPR.scorp[(tt * 6 | 0) & 1], c.x, c.y, c.vx < 0);
     case 'quail': { const mv = Math.hypot(c.vx, c.vy) > 3; const fl = c.vx < 0; for (const k of c.kids) at(SPR.chick[mv ? f : 0], k.x, k.y, fl); at(SPR.quail[mv ? f : 0], c.x, c.y, fl); return; }
     case 'roadrunner': return at(SPR.rr[c.stopped > 0 ? 0 : f], c.x, c.y, c.vx < 0);
     case 'rabbit': return at(SPR.rabbit[c.z > 0 ? 1 : 0], c.x, c.y - c.z, c.vx < 0);
@@ -1273,7 +1754,8 @@ function drawHorse(cx, cy) {
   else spr = SPR[H.gait][fi(8)];
   const side = spr.width === 34;
   const ax = side ? 15 : 11;
-  const dx = Math.floor(H.x - cx) - (side && H.face < 0 ? spr.width - 1 - ax : ax), dy = Math.floor(H.y - cy - H.z) - HB;
+  const jit = H.shakeT > 0 ? (((T * 30) | 0) & 1 ? 1 : -1) : 0;
+  const dx = Math.floor(H.x - cx) - (side && H.face < 0 ? spr.width - 1 - ax : ax) + jit, dy = Math.floor(H.y - cy - H.z) - HB;
   if (H.inWater) { b.save(); b.beginPath(); b.rect(0, 0, LW, Math.floor(H.y - cy) - 2); b.clip(); }
   if (side && H.face < 0) { b.save(); b.scale(-1, 1); b.drawImage(spr, -dx - spr.width, dy); b.restore(); } else b.drawImage(spr, dx, dy);
   if (H.inWater) { b.restore(); b.fillStyle = 'rgba(200,240,255,.8)'; b.fillRect(Math.floor(H.x - cx) - 8, Math.floor(H.y - cy) - 2, 16, 1); }
@@ -1287,7 +1769,7 @@ function drawClouds(cx, cy, tt) {
   b.globalAlpha = 1; b.globalCompositeOperation = 'source-over';
 }
 function drawCompass(cx, cy, tt) {
-  if (mode !== 'play' || cine) return;
+  if (mode !== 'play' || cine || noCompass) return;
   const next = RINGS.find(r => !r.found); if (!next) return;
   if (S.played < 25 && RINGS.every(r => !r.found)) return;
   const sx = next.x - cx, sy = next.y - cy;
@@ -1300,9 +1782,430 @@ function drawCompass(cx, cy, tt) {
   b.fillStyle = 'rgba(232,248,255,' + (.75 + .25 * p).toFixed(2) + ')'; b.fillRect(x, y - 2, 1, 5); b.fillRect(x - 2, y, 5, 1); b.fillRect(x - 1, y - 1, 3, 3);
 }
 
+/* ============================== surfaces, dust, prints ============================== */
+const DUSTC = [['#f6dcb4', '#e8c494'], ['#f2d6ae', '#e0be90'], ['#eed6a8', '#d8bc8c'], ['#fbf3e2', '#e9dcc2'], ['#eeb08a', '#d48e66'], ['#ead2ae', '#d6b68e'], ['#f0d6a8', '#e2be8e'], ['#ffffff', '#e8e4ee'], ['#6a5e62', '#4a4044']];
+const dustCols = b => DUSTC[b] || DUSTC[0];
+const PRINTC = ['150,100,60', '140,96,60', '120,96,60', '170,150,120', '140,70,44', '130,100,70', '120,90,60', '150,150,175', '24,18,20'];
+function addPrint(x, y, b) { if (b == null) b = biomeAt(x, y); prints.push({ x, y, t: 0, c: PRINTC[b] || PRINTC[0] }); if (prints.length > 320) prints.shift(); }
+function surfaceAt(x, y) {
+  if (H.inWater) return 'water';
+  if (nearRail(y, 6)) return 'rail';
+  for (const L of lmsNear(x, y, 100)) {
+    if (L.type === 'ghosttown' && Math.abs(x - L.x) < 79 && y > L.y && y < L.y + 8) return 'wood';
+    if (L.type === 'station' && x > L.x - 14 && x < L.x + 44 && y > L.y && y < L.y + 13) return 'stone';
+  }
+  const b = H.biome; return b === 7 ? 'soft' : b === 8 ? 'crunch' : b === 4 ? 'stone' : b === 3 ? 'crust' : 'sand';
+}
+function footfall() {
+  const surf = surfaceAt(H.x, H.y); sfx.hoofS(surf, H.gait);
+  if (H.inWater) { for (let k = 0; k < 3; k++) part(H.x + rand(-4, 4), H.y, rand(-14, 14), rand(-30, -14), .4, R() < .5 ? '#cfefff' : '#ffffff', 'drop', 140); return; }
+  if (H.gait === 'canter' || (H.gait === 'trot' && R() < .4)) dust(H.x - H.face * 6, H.y, H.gait === 'canter' ? 2 : 1, 1);
+  if (H.biome === 6 && H.gait !== 'walk' && R() < .7) part(H.x + rand(-5, 5), H.y - 2, rand(-14, 14), rand(-26, -10), 1, pick(['#f28a2e', '#b49cf0', '#f6d24a', '#fff6ea']), 'petal', 50);
+  if (surf !== 'wood' && surf !== 'rail' && surf !== 'stone') addPrint(H.x + rand(-2, 2) - H.face * 2, H.y + (prints.length & 1 ? 1 : -1), H.biome);
+}
+
+/* ============================== wild horses ============================== */
+const COATS = [
+  { b: '#b9b4b0', s: '#8e8986', h: '#dcd8d2', m: '#5e5a58', mh: '#7a7674', mu: '#cfc6bf', sock: '#f2eee8' },
+  { b: '#3e3438', s: '#2a2226', h: '#5e5056', m: '#1c1416', mh: '#30262a', mu: '#6a5a5a', sock: '#3e3438', o: '#120a0c' },
+  { b: '#e8bc6a', s: '#c99a4a', h: '#f6d898', m: '#fbf0d8', mh: '#eadcc0', mu: '#f0d2a8', sock: '#fbf0d8' },
+  { b: '#f2ece2', s: '#d4cabc', h: '#ffffff', m: '#e2d8cc', mh: '#c8bcae', mu: '#f0d8cc', sock: '#ffffff' },
+  { b: '#c9a678', s: '#a6845a', h: '#e2c49a', m: '#3e2c22', mh: '#5a4232', mu: '#e0c8a8', sock: '#c9a678' },
+  { b: '#b8683a', s: '#94502a', h: '#d88a56', m: '#3a2418', mh: '#5a3a28', mu: '#f1c9a0', sock: '#fbefdc', pinto: true }
+];
+const herdCache = {}, PINTO_W = { c: hexc('#fbf3e6') };
+function recolor(src, map, pinto) {
+  const w = src.width, h = src.height, c = mk(w, h), g = c.getContext('2d'); g.drawImage(src, 0, 0);
+  const id = g.getImageData(0, 0, w, h), d = id.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (!d[i + 3]) continue;
+    let n = map.get(d[i] << 16 | d[i + 1] << 8 | d[i + 2]);
+    if (pinto && n && n.body) { const p = i >> 2, x = p % w, y = (p / w) | 0; if (vnoise(x / 3.2, y / 3.2, 7) > .56) n = PINTO_W; }
+    if (n) { d[i] = n.c[0]; d[i + 1] = n.c[1]; d[i + 2] = n.c[2]; }
+  }
+  g.putImageData(id, 0, 0); return c;
+}
+function herdSet(ci) {
+  if (herdCache[ci]) return herdCache[ci];
+  const co = COATS[ci], map = new Map();
+  for (const k of ['b', 's', 'h', 'm', 'mh', 'mu', 'sock', 'o']) if (co[k]) { const src = hexc(HP[k]); map.set(src[0] << 16 | src[1] << 8 | src[2], { c: hexc(co[k]), body: k === 'b' || k === 's' || k === 'h' }); }
+  const rc = a => a.map(s => recolor(s, map, co.pinto));
+  return herdCache[ci] = { walk: rc(SPR.walk), trot: rc(SPR.trot), canter: rc(SPR.canter), idle: rc([SPR.idle[0], SPR.idle[4]]), graze: rc(SPR.graze) };
+}
+let herd = null, herdCD = 45, herdSndT = 0;
+const SLOTS = [[-22, -15], [-24, 15], [-44, 0], [6, -22], [6, 22], [-62, -12]];
+function spawnHerd() {
+  const hd = Math.hypot(H.vx, H.vy) > 10 ? Math.atan2(H.vy, H.vx) : R() * TAU;
+  for (let t = 0; t < 8; t++) {
+    const a = hd + rand(-1, 1), d = rand(200, 250), x = H.x + Math.cos(a) * d, y = H.y + Math.sin(a) * d * .8;
+    const b = biomeAt(x, y); if (![0, 1, 2, 3, 5, 6, 7].includes(b) || blocked(x, y, 10) || waterAt(x, y) || nearRail(y, 30)) continue;
+    const n = 4 + (R() * 3 | 0), mem = [];
+    for (let k = 0; k < n; k++) { const p = collide(x + rand(-30, 30), y + rand(-16, 16), 4.5); mem.push({ x: p.x, y: p.y, vx: 0, vy: 0, face: R() < .5 ? 1 : -1, anim: R(), coat: (R() * COATS.length) | 0, st: 'graze', stT: rand(0, 3), tx: p.x, ty: p.y, gait: 'idle', slot: k }); }
+    for (const m of mem) herdSet(m.coat);
+    herd = { mem, joined: false, idle: 0, t: 0, curious: 0, cx: x, cy: y, head: 0 };
+    return;
+  }
+}
+function updHerd(dt) {
+  if (mode !== 'play') return;
+  if (!herd) { herdCD -= dt; if (herdCD <= 0 && S.played > 45 && !cine) { spawnHerd(); herdCD = rand(70, 130); } return; }
+  const h = herd; h.t += dt;
+  const hs = Math.hypot(H.vx, H.vy);
+  let mind = 1e9, sx = 0, sy = 0;
+  for (const m of h.mem) { const d = dist(m.x, m.y, H.x, H.y); if (d < mind) mind = d; sx += m.x; sy += m.y; }
+  h.cx = sx / h.mem.length; h.cy = sy / h.mem.length;
+  if (mind < 90) discover('wildhorses');
+  if (!h.joined) {
+    if ((mind < 70 && hs > 42) || (h.curious > 0 && mind < 60 && hs > 30)) {
+      h.joined = true; h.idle = 0;
+      if (!S.ranHerd) { S.ranHerd = 1; toast('The herd runs with you', 'Keep going. They will follow.', entryImg('wildhorses')); }
+      h.mem.forEach((m, i) => { if (i < 3) sfx.whinny(rand(1, 1.3), rand(0, .6) + i * .25, .06); });
+    }
+    if (h.curious > 0) h.curious -= dt;
+    if (mind > 460) { herd = null; return; }
+  } else {
+    h.idle = hs < 10 ? h.idle + dt : 0;
+    if (h.idle > 5 || cine) { h.joined = false; for (const m of h.mem) { m.st = 'graze'; m.stT = rand(1, 4); } }
+  }
+  if (hs > 8) h.head = Math.atan2(H.vy, H.vx);
+  const ca = Math.cos(h.head), sa = Math.sin(h.head);
+  let steps = 0;
+  for (const m of h.mem) {
+    let dvx = 0, dvy = 0, top = 14;
+    if (h.joined) {
+      const [ox, oy] = SLOTS[m.slot % SLOTS.length];
+      const tx = H.x + ox * ca - oy * sa, ty = H.y + (ox * sa + oy * ca) * .8;
+      dvx = H.vx + (tx - m.x) * 1.6; dvy = H.vy + (ty - m.y) * 1.6; top = 92;
+    } else if (h.curious > 0) {
+      const dx = H.x - m.x, dy = H.y - m.y, d = Math.hypot(dx, dy) || 1; if (d > 26 + m.slot * 4) { dvx = dx / d * 34; dvy = dy / d * 26; } top = 40;
+    } else {
+      m.stT -= dt; if (m.stT <= 0) { if (m.st === 'graze') { m.st = 'walk'; m.tx = h.cx + rand(-34, 34); m.ty = h.cy + rand(-18, 18); m.stT = rand(2, 4); } else { m.st = 'graze'; m.stT = rand(3, 7); } }
+      if (m.st === 'walk') { const dx = m.tx - m.x, dy = m.ty - m.y, d = Math.hypot(dx, dy); if (d > 3) { dvx = dx / d * 12; dvy = dy / d * 9; } }
+      if (mind < 34 && hs > 20) { const dx = m.x - H.x, dy = m.y - H.y, d = Math.hypot(dx, dy) || 1; dvx = dx / d * 40; dvy = dy / d * 30; m.st = 'walk'; m.stT = 1; top = 40; }
+    }
+    for (const o of h.mem) if (o !== m) { const dx = m.x - o.x, dy = m.y - o.y, d = Math.hypot(dx, dy); if (d < 13 && d > .01) { dvx += dx / d * (13 - d) * 6; dvy += dy / d * (13 - d) * 6; } }
+    { const dx = m.x - H.x, dy = m.y - H.y, d = Math.hypot(dx, dy); if (d < 14 && d > .01) { dvx += dx / d * (14 - d) * 8; dvy += dy / d * (14 - d) * 8; } }
+    const s0 = Math.hypot(dvx, dvy); if (s0 > top) { dvx *= top / s0; dvy *= top / s0; }
+    const k = Math.min(1, (h.joined ? 3.2 : 2) * dt);
+    m.vx += (dvx - m.vx) * k; m.vy += (dvy - m.vy) * k;
+    const p = collide(m.x + m.vx * dt, m.y + m.vy * dt, 4.5);
+    if (p.nx || p.ny) { const l = Math.hypot(p.nx, p.ny), ux = p.nx / l, uy = p.ny / l, vn = m.vx * ux + m.vy * uy; if (vn < 0) { m.vx -= vn * ux; m.vy -= vn * uy; } }
+    m.x = p.x; m.y = p.y;
+    const sp = Math.hypot(m.vx, m.vy);
+    m.gait = sp < 2.5 ? 'idle' : sp < 40 ? 'walk' : sp < 64 ? 'trot' : 'canter';
+    if (Math.abs(m.vx) > 3) m.face = m.vx > 0 ? 1 : -1;
+    const stride = { walk: 24, trot: 32, canter: 44 }[m.gait] || 24;
+    if (sp > 2.5) { const bf = m.anim; m.anim += sp * dt / stride; const beats = m.gait === 'walk' ? 4 : m.gait === 'trot' ? 2 : 3; if (Math.floor(bf * beats) !== Math.floor(m.anim * beats)) { steps++; if (m.gait === 'canter' && R() < .5) dust(m.x - m.face * 6, m.y, 1, 0, biomeAt(m.x, m.y)); if (R() < .5) addPrint(m.x - m.face * 2, m.y); } }
+    else m.anim += dt * .4;
+  }
+  herdSndT -= dt; if (steps && herdSndT <= 0 && dist(h.cx, h.cy, H.x, H.y) < 220) { herdSndT = .07; noise(.05, .05, 820); }
+}
+function drawHerdHorse(m, cx, cy) {
+  const b = bctx, set = herdSet(m.coat); let spr;
+  const fi = n => Math.floor((m.anim % 1 + 1) % 1 * n) % n;
+  if (m.gait === 'idle') spr = (!herd.joined && m.st === 'graze') ? set.graze[Math.floor(T * 1.5 + m.slot) % 4] : set.idle[(T + m.slot * 1.3) % 6 > 5.8 ? 1 : 0];
+  else spr = set[m.gait][fi(8)];
+  const ax = 15, dx = Math.floor(m.x - cx) - (m.face < 0 ? spr.width - 1 - ax : ax), dy = Math.floor(m.y - cy) - HB;
+  if (m.face < 0) { b.save(); b.scale(-1, 1); b.drawImage(spr, -dx - spr.width, dy); b.restore(); } else b.drawImage(spr, dx, dy);
+}
+
+/* ============================== the train ============================== */
+const train = { on: false, x: 0, dir: 1, sp: 74, cars: [], cd: 18, raceT: 0, raced: false, whistled: false, chugT: 0 };
+const CARDEF = [['loco', 46], ['tender', 24], ['boxcar', 38], ['passcar', 40], ['boxcar', 38], ['passcar', 40], ['caboose', 30]];
+function updTrain(dt) {
+  if (mode !== 'play') return;
+  const near = Math.abs(H.y - RAILY) < 340;
+  if (!train.on) {
+    train.cd -= dt * (near ? 1 : .25);
+    if (train.cd <= 0 && near && !cine) { train.on = true; train.dir = R() < .5 ? 1 : -1; train.x = H.x - train.dir * (LW / 2 + 240); train.cars = CARDEF.map(([k, w]) => ({ k, w, cx: 0 })); train.raceT = 0; train.raced = false; train.whistled = false; }
+    return;
+  }
+  train.x += train.dir * train.sp * dt;
+  let off = 0; for (const c of train.cars) { c.cx = train.x - train.dir * (off + c.w / 2); off += c.w + 2; }
+  const tail = train.x - train.dir * off;
+  if ((train.dir > 0 && tail > H.x + LW / 2 + 260) || (train.dir < 0 && tail < H.x - LW / 2 - 260)) { train.on = false; train.cd = rand(45, 85); return; }
+  const nx = clamp(H.x, Math.min(train.x, tail), Math.max(train.x, tail)), dNear = dist(nx, RAILY, H.x, H.y);
+  train.chugT -= dt; if (train.chugT <= 0) { train.chugT = .2; if (dNear < 320) sfx.chug(1 - dNear / 320); }
+  if (!train.whistled && Math.abs(train.x - H.x) < LW / 2 + 60 && dNear < 260) { train.whistled = true; sfx.whistle(1); }
+  if (R() < dt * 14) parts.push({ x: train.x - train.dir * 7 + rand(-1, 1), y: RAILY - 27, vx: -train.dir * rand(8, 20), vy: rand(-16, -8), life: rand(1.4, 2.2), max: 2, c: R() < .5 ? '#f2eee8' : '#d8d2cc', kind: 'smoke', g: -2, z: 0 });
+  if (dNear < 190) discover('train');
+  const racing = Math.hypot(H.vx, H.vy) > 64 && Math.abs(H.y - RAILY) < 80 && Math.abs(H.x - train.x) < 70 && Math.sign(H.vx) === train.dir;
+  train.raceT = racing ? train.raceT + dt : Math.max(0, train.raceT - dt * .5);
+  if (train.raceT > 3 && !train.raced) {
+    train.raced = true; S.races = (S.races || 0) + 1; sfx.whistle(2);
+    toast('The engineer tips his hat', S.races > 1 ? 'Another good race. That makes ' + S.races + '.' : 'That was a good race.', entryImg('train'));
+    for (let i = 0; i < 14; i++) part(H.x + rand(-8, 8), H.y - 20, rand(-20, 20), rand(-40, -14), 1.4, pick(['#ff8fa8', '#ffd0dc', '#fff2a8']), 'heart');
+  }
+}
+
+/* ============================== dust devils & falling stars ============================== */
+const devils = [];
+function updDevils(dt) {
+  if (mode !== 'play') return;
+  if (devils.length < 1 && nightAmt() < .3 && [0, 3, 7, 1].includes(H.biome) && R() < dt * .03) { const a = R() * TAU; devils.push({ x: H.x + Math.cos(a) * 170, y: H.y + Math.sin(a) * 110, vx: rand(-12, 12), vy: rand(-8, 8), t: 0, life: rand(16, 26), hit: false }); }
+  for (let i = devils.length - 1; i >= 0; i--) {
+    const d = devils[i]; d.t += dt;
+    d.vx = clamp(d.vx + rand(-20, 20) * dt + (H.x - d.x) * .02 * dt, -22, 22); d.vy = clamp(d.vy + rand(-14, 14) * dt + (H.y - d.y) * .02 * dt, -16, 16);
+    d.x += d.vx * dt; d.y += d.vy * dt;
+    if (R() < dt * 16) part(d.x + rand(-4, 4), d.y, rand(-14, 14), rand(-6, -2), .6, pick(dustCols(H.biome)), 'dust', 0);
+    if (!d.hit && dist(d.x, d.y, H.x, H.y) < 11) {
+      d.hit = true; discover('dustdevil'); sfx.swirl();
+      if (H.state !== 'hop') { setState('hop'); H.vz = 95; H.z = .1; }
+      for (let k = 0; k < 26; k++) { const a = k / 26 * TAU; part(H.x + Math.cos(a) * 8, H.y - 8 + Math.sin(a) * 4, -Math.sin(a) * 40, Math.cos(a) * 20 - 10, .9, pick(dustCols(H.biome)), 'dust', 10); }
+    }
+    if (d.t > d.life) devils.splice(i, 1);
+  }
+}
+let star = null, starCD = 16;
+function updStar(dt) {
+  if (mode !== 'play') return;
+  if (star) { star.t += dt; if (star.t > star.life) star = null; return; }
+  if (nightAmt() > .75) { starCD -= dt; if (starCD <= 0) { starCD = rand(14, 32); const dir = R() < .5 ? -1 : 1; star = { x: rand(LW * .15, LW * .85), y: rand(LH * .06, LH * .35), vx: dir * rand(110, 160), vy: rand(36, 60), t: 0, life: 1.6 }; } }
+}
+function makeWish() {
+  if (!star || star.wished || mode !== 'play') return false; star.wished = true;
+  const sx = cam.x + star.x + star.vx * star.t, sy = cam.y + star.y + star.vy * star.t;
+  for (let i = 0; i < 18; i++) part(sx, sy, rand(-30, 30), rand(-20, 30), 1.2, pick(['#fff6c8', '#ffffff', '#cfeeff']), 'spark');
+  S.wishes = (S.wishes || 0) + 1; sfx.wish();
+  if (!S.found.wish) discover('wish'); else toast('You made a wish', S.wishes + ' wishes so far. Nobody has to know what they were.', entryImg('wish'));
+  return true;
+}
+
+/* ============================== regions & the map ============================== */
+let regT = 0, bannerT = 0, lastBanner = -99, seenT = 0, ambT = 2;
+const MC = 48, mapColCache = new Map();
+function checkRegion(dt) {
+  regT -= dt; if (regT > 0) return; regT = .5;
+  if (cardTimer > 0) return;
+  const r = regionAt(H.x, H.y);
+  if (r.key !== S.curRegion) {
+    const first = !S.regions[r.key]; S.regions[r.key] = 1; S.curRegion = r.key;
+    if (T - lastBanner > 5) { $('rgN').textContent = r.name; $('rgB').textContent = (first ? 'New place · ' : '') + BIOME_NAME[r.b]; $('region').classList.add('show'); bannerT = 3.6; lastBanner = T; if (first) sfx.discover(); }
+  }
+}
+function markSeen() {
+  const x0 = Math.floor((cam.x - 24) / MC), x1 = Math.floor((cam.x + LW + 24) / MC), y0 = Math.floor((cam.y - 24) / MC), y1 = Math.floor((cam.y + LH + 24) / MC);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) seen.add(x + ',' + y);
+  const lt = trail[trail.length - 1]; if (!lt || dist(lt[0], lt[1], H.x, H.y) > 28) { trail.push([Math.round(H.x), Math.round(H.y)]); if (trail.length > 4000) trail.splice(0, 500); }
+}
+function ambient(dt) {
+  ambT -= dt; if (ambT > 0) return; ambT = rand(.6, 1.6);
+  if (nightAmt() > .5 && [1, 2, 5, 6].includes(H.biome) && R() < .7) sfx.cricket();
+  for (const L of lmsNear(H.x, H.y, 160)) if (L.type === 'windmill' && dist(L.x, L.y, H.x, H.y) < 140 && R() < .35) sfx.creak();
+}
+const MAPPAL = ['#f0c58e', '#dcbf86', '#c3c27e', '#f4ead6', '#d98e62', '#c7bd8e', '#eaa66c', '#fbf9f4', '#5c5054'];
+let mapZ = 4, mapPan = { x: 0, y: 0 }, mapDrag = null;
+function openMap() { audioInit(); markSeen(); mapPan.x = mapPan.y = 0; $('mapDlg').classList.remove('hide'); sfx.paper(); requestAnimationFrame(drawMap); }
+function closeMap() { $('mapDlg').classList.add('hide'); }
+function drawMap() {
+  const cv = $('mapC'), r = cv.getBoundingClientRect(); if (!r.width || !r.height) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2); cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+  const W2 = cv.width, H2 = cv.height, cell = Math.max(2, Math.round(mapZ * dpr)), ppw = cell / MC;
+  const wx0 = H.x + mapPan.x - W2 / 2 / ppw, wy0 = H.y + mapPan.y - H2 / 2 / ppw;
+  const X = wx => (wx - wx0) * ppw, Y = wy => (wy - wy0) * ppw;
+  g.fillStyle = '#ead9b8'; g.fillRect(0, 0, W2, H2);
+  g.fillStyle = 'rgba(140,100,60,.08)'; for (let y = 0; y < H2; y += Math.round(6 * dpr)) g.fillRect(0, y, W2, 1);
+  const c0 = Math.floor(wx0 / MC), c1 = Math.ceil((wx0 + W2 / ppw) / MC), r0 = Math.floor(wy0 / MC), r1 = Math.ceil((wy0 + H2 / ppw) / MC);
+  const labels = new Map();
+  for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) {
+    const k = cx + ',' + cy; if (!seen.has(k)) continue;
+    const wx = cx * MC + MC / 2, wy = cy * MC + MC / 2;
+    let col = mapColCache.get(k); if (!col) { col = MAPPAL[biomeAt(wx, wy)]; mapColCache.set(k, col); }
+    g.fillStyle = col; g.fillRect(Math.floor(X(cx * MC)), Math.floor(Y(cy * MC)), cell + 1, cell + 1);
+    const rg = regionAt(wx, wy); let L = labels.get(rg.key); if (!L) labels.set(rg.key, L = { n: 0, x: 0, y: 0, r: rg }); L.n++; L.x += wx; L.y += wy;
+  }
+  const seenAt = (x, y) => seen.has(Math.floor(x / MC) + ',' + Math.floor(y / MC));
+  const ell = (x, y, rx, ry) => { g.beginPath(); g.ellipse(x, y, Math.max(1, rx), Math.max(1, ry), 0, 0, TAU); g.fill(); };
+  for (let wx = Math.floor(wx0 / 6) * 6; wx < wx0 + W2 / ppw; wx += 6) { const ry = riverY(wx); if (!seenAt(wx, ry)) continue; g.fillStyle = S.river ? '#4f9ed2' : '#c8a07a'; const w = Math.max(1.5, riverHW(wx) * 2 * ppw); g.fillRect(X(wx), Y(ry) - w / 2, 6 * ppw + 1, w); }
+  for (let wx = Math.floor(wx0 / 8) * 8; wx < wx0 + W2 / ppw; wx += 8) { if (!seenAt(wx, RAILY)) continue; g.fillStyle = '#5a4a44'; g.fillRect(X(wx), Y(RAILY) - dpr, 8 * ppw + 1, 2 * dpr); if ((wx / 8) % 2 === 0) g.fillRect(X(wx), Y(RAILY) - 3 * dpr, dpr, 6 * dpr); }
+  const vw = W2 / ppw, vh = H2 / ppw, mx = wx0 + vw / 2, my = wy0 + vh / 2, rad = Math.max(vw, vh) * .75;
+  for (const m of mesasNear(mx, my, rad)) if (seenAt(m.x, m.y)) { g.fillStyle = '#b8603e'; ell(X(m.x), Y(m.y), m.rx * ppw, m.ry * ppw * 1.6); }
+  for (const o of oasesNear(mx, my, rad)) if (seenAt(o.x, o.y)) { g.fillStyle = '#4f9ed2'; ell(X(o.x), Y(o.y), Math.max(2 * dpr, o.rx * ppw), Math.max(1.5 * dpr, o.ry * ppw)); }
+  g.fillStyle = 'rgba(122,70,40,.6)'; for (const [tx, ty] of trail) { const sx = X(tx), sy = Y(ty); if (sx < 0 || sy < 0 || sx > W2 || sy > H2) continue; g.fillRect(sx, sy, Math.max(1, dpr), Math.max(1, dpr)); }
+  const icon = (spr, wx, wy, sz) => { if (!spr) return; const s = Math.max(.5, Math.round(sz * dpr / Math.max(spr.width, spr.height) * 2) / 2), w = spr.width * s, h = spr.height * s; g.drawImage(spr, Math.round(X(wx) - w / 2), Math.round(Y(wy) - h * .8), w, h); };
+  for (const L of lmsNear(mx, my, rad)) if (seenAt(L.x, L.y)) icon(lmIcon(L.type), L.x, L.y, 24);
+  for (const cp of campsNear(mx, my, rad)) if (seenAt(cp.x, cp.y)) icon(SPR.bottle, cp.x, cp.y, 16);
+  for (const ri of RINGS) if (seenAt(ri.x, ri.y)) icon(ri.found ? SPR.centerDim : SPR.center, ri.x, ri.y, 16);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const fs = Math.round(12 * dpr); g.font = '600 ' + fs + 'px "Pixelify Sans", monospace'; g.lineJoin = 'round';
+  const placed = [], here = regionAt(H.x, H.y).key;
+  for (const L of [...labels.values()].sort((a, c) => (c.r.key === here) - (a.r.key === here) || c.n - a.n)) {
+    if (L.n < 4 && L.r.key !== here) continue;
+    const x = X(L.x / L.n), y = Y(L.y / L.n), w = g.measureText(L.r.name).width + 10 * dpr, h = fs + 6 * dpr;
+    const box = [x - w / 2, y - h / 2, x + w / 2, y + h / 2];
+    if (placed.some(p => p[0] < box[2] && p[2] > box[0] && p[1] < box[3] && p[3] > box[1])) continue;
+    placed.push(box); g.lineWidth = 4 * dpr; g.strokeStyle = 'rgba(250,240,220,.9)'; g.strokeText(L.r.name, x, y); g.fillStyle = '#5a3424'; g.fillText(L.r.name, x, y);
+  }
+  const hx = X(H.x), hy = Y(H.y), pulse = 1 + .25 * Math.sin(performance.now() / 200);
+  g.fillStyle = '#fff6e6'; g.beginPath(); g.arc(hx, hy, 7 * dpr * pulse, 0, TAU); g.fill(); g.fillStyle = '#e9845a'; g.beginPath(); g.arc(hx, hy, 4.5 * dpr, 0, TAU); g.fill();
+  $('mapTitle').textContent = regionAt(H.x, H.y).name;
+  $('mapInfo').textContent = Object.keys(S.regions).length + ' places wandered · ' + ((S.dist || 0) / 1000).toFixed(1) + ' km of hoofprints';
+}
+
+/* ============================== postcards ============================== */
+let lastCard = null, noCompass = false;
+async function postcard() {
+  if (mode !== 'play') return;
+  audioInit(); sfx.shutter();
+  noCompass = true; render(); noCompass = false;
+  const k = clamp(Math.round(1080 / LW), 2, 6), pw = LW * k, ph = LH * k, pad = Math.round(Math.min(pw, ph) * .05), band = Math.round(Math.max(pw, ph) * .08 + 34);
+  const c = mk(pw + pad * 2, ph + pad + band), g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+  g.fillStyle = '#fff6e6'; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(buf, pad, pad, pw, ph);
+  g.fillStyle = '#4a2c1f'; g.fillRect(pad - 3, pad - 3, pw + 6, 3); g.fillRect(pad - 3, pad + ph, pw + 6, 3); g.fillRect(pad - 3, pad, 3, ph); g.fillRect(pad + pw, pad, 3, ph);
+  try { await document.fonts.load('600 32px "Pixelify Sans"'); } catch (e) {}
+  const rg = regionAt(H.x, H.y), st = Math.round(band * .78);
+  g.textBaseline = 'middle'; g.fillStyle = '#4a2c1f'; g.font = '600 ' + Math.round(band * .32) + 'px "Pixelify Sans", monospace';
+  g.fillText('Greetings from ' + rg.name, pad, pad + ph + band * .4, c.width - pad * 3 - st);
+  g.fillStyle = '#8a5f45'; g.font = Math.round(band * .21) + 'px "Pixelify Sans", monospace';
+  g.fillText('Day ' + S.day + ' · ' + (S.name ? 'with ' + S.name : 'with a horse with no name'), pad, pad + ph + band * .74, c.width - pad * 3 - st);
+  const sx = c.width - pad - st, sy = Math.round(pad + ph + (band - st) / 2);
+  g.fillStyle = '#e9845a'; g.fillRect(sx, sy, st, st); g.fillStyle = '#fff6e6'; g.fillRect(sx + 3, sy + 3, st - 6, st - 6); g.fillStyle = '#f2c894'; g.fillRect(sx + 6, sy + 6, st - 12, st - 12);
+  const hs = SPR.idle[0], f = Math.max(1, Math.floor((st - 14) / hs.width)); g.drawImage(hs, Math.round(sx + st / 2 - hs.width * f / 2), Math.round(sy + st - 7 - hs.height * f), hs.width * f, hs.height * f);
+  lastCard = c; $('pImg').src = c.toDataURL('image/png');
+  const fl = $('flash'); fl.classList.add('on'); requestAnimationFrame(() => requestAnimationFrame(() => fl.classList.remove('on')));
+  setTimeout(() => $('photo').classList.remove('hide'), 260);
+}
+function savePostcard() { if (!lastCard) return; const a = document.createElement('a'); a.download = 'horse-postcard.png'; a.href = lastCard.toDataURL('image/png'); document.body.appendChild(a); a.click(); a.remove(); }
+function sharePostcard() {
+  if (!lastCard) return;
+  lastCard.toBlob(async bl => {
+    try { const file = new File([bl], 'horse-postcard.png', { type: 'image/png' }); if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'A Horse With No Name', text: 'Greetings from the desert.' }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+    savePostcard();
+  }, 'image/png');
+}
+
+/* ============================== letters & landmark actions ============================== */
+const LETTERS = [
+  'Whoever finds this: the water at the palm groves is sweet. Drink slow, and let the horse drink first.',
+  'Day three. The horse walks a little ahead of me, like it already knows the way. I think it does.',
+  'I tried to give it a name today. It looked at me like I had said something silly.',
+  'Found a seashell in the dunes. I held it to my ear and heard wind instead of waves. Out here that is the same thing.',
+  'There is a camp of cowboys who sleep all day and sing all night. Lovely voices. Terrible wine.',
+  'The tall stones hum when nobody is near. When you walk up they go quiet, like shy birds.',
+  'It rained this morning. The whole desert opened its eyes at once.',
+  'Last night I saw fish swimming through the sand. The horse saw them too. We have not told anyone.',
+  'Nine days now. I am slower than I was. The horse waits for me every single time.',
+  'I am letting the horse go free. It has somewhere to be, and I think somebody to find.',
+  'If you are reading this, it found you.',
+  'Be good to each other. That is all the desert ever asks.'
+];
+const EMPTYMAIL = ['Nothing inside but a pressed desert flower.', 'Empty, except for a very small spider who seems happy here.', 'Someone left a peppermint. The horse eats it before you can say anything.', 'Just sand. Someone has written HI in it with a finger.', 'A postcard of the ocean, unsigned.'];
+const PIANO_LINES = ['Nobody home. Just the old piano, playing itself.', 'The piano plays a little faster this time.', 'Somebody upstairs laughs. Then it is quiet.', 'The swinging doors creak. The piano keeps going.'];
+const WAGON_LINES = ['An old quilt and a tin of beans.', 'A map of somewhere that is not here.', 'A sleeping lizard. Shh.', 'A cracked mirror. The horse looks very handsome in it.'];
+function showLetter(k, txt, sign, img) {
+  $('lK').textContent = k; $('lT').textContent = txt; $('lS').textContent = sign || '';
+  const im = $('lImg'); if (img) { im.src = img.toDataURL(); im.style.display = 'block'; } else { im.removeAttribute('src'); im.style.display = 'none'; }
+  $('letter').classList.remove('hide');
+}
+function closeLetter() { $('letter').classList.add('hide'); }
+function openLetter(L) {
+  setState('paw'); H.stT = .5; sfx.paper();
+  const st = S.mail[L.id];
+  if (!st && S.letters < LETTERS.length) { S.letters++; S.mail[L.id] = S.letters; showLetter('Letter ' + S.letters + ' of ' + LETTERS.length, LETTERS[S.letters - 1], '— M.'); discover('mailbox'); }
+  else if (st > 0) showLetter('Letter ' + st + ' of ' + LETTERS.length + ', again', LETTERS[st - 1], '— M.');
+  else {
+    if (!st) S.mail[L.id] = -1;
+    const e = EMPTYMAIL[Math.floor(hash(L.x | 0, L.y | 0, 5) * EMPTYMAIL.length)]; showLetter('An empty mailbox', e, '');
+    if (e.includes('peppermint')) setTimeout(() => { setState('graze'); H.stT = 1.5; for (let i = 0; i < 8; i++) part(H.x + H.face * 10, H.y - 16, rand(-10, 10), rand(-24, -10), 1.2, pick(['#ff8fa8', '#ffd0dc']), 'heart'); }, 400);
+  }
+  save(); updateHUD();
+}
+function lmThing() {
+  const hx = H.x + H.face * 8, hy = H.y;
+  for (const L of lmsNear(H.x, H.y, 140)) {
+    if (dist(H.x, H.y, L.x, L.y) > L.rad + 34) continue;
+    switch (L.type) {
+      case 'windmill': if (dist(hx, hy, L.trough.x, L.trough.y) < 17) return { L, a: 'Drink' }; break;
+      case 'ghosttown': if (dist(hx, hy, L.x, L.y + 4) < 17) return { L, a: 'Knock' }; break;
+      case 'whale': if (dist(hx, hy, L.x - 46, L.y + 2) < 21) return { L, a: 'Listen' }; break;
+      case 'wagon': if (dist(hx, hy, L.x, L.y + 6) < 23) return { L, a: 'Peek' }; break;
+      case 'station': if (dist(hx, hy, L.x + 28, L.y + 8) < 17) return { L, a: 'Ding' }; break;
+      case 'mailbox': if (dist(hx, hy, L.x, L.y + 2) < 16) return { L, a: 'Open' }; break;
+      case 'petroglyph': if (dist(hx, hy, L.x, L.y + 2) < 21) return { L, a: 'Look' }; break;
+      case 'dinobones': if (dist(hx, hy, L.x + 34, L.y + 2) < 17) return { L, a: 'Sniff' }; break;
+      case 'bell': if (dist(hx, hy, L.x, L.y + 5) < 18) return { L, a: 'Ring' }; break;
+    }
+  }
+  return null;
+}
+function itemPop(x, y, spr) { parts.push({ x, y: y - 2, vx: 0, vy: -28, life: 1.6, max: 1.6, kind: 'item', spr, g: 22, z: 0 }); sfx.pop(); }
+function burstFlock(c) {
+  if (c.burst) return; c.burst = .001; sfx.flutter(); discover('wrens');
+  const a0 = Math.atan2(c.y - H.y, c.x - H.x);
+  for (const bd of c.birds) { const a = a0 + rand(-.9, .9); bd.vx = Math.cos(a) * rand(40, 70); bd.vy = Math.sin(a) * rand(25, 45); bd.vz = rand(30, 55); }
+}
+function doLM(lt) {
+  const L = lt.L; H.view = 'side';
+  switch (lt.a) {
+    case 'Drink': setState('drink'); sfx.drink(); H.face = L.trough.x > H.x ? 1 : -1; break;
+    case 'Knock': {
+      setState('paw'); sfx.knock(); setTimeout(() => sfx.piano(), 300); L.knock = (L.knock || 0) + 1;
+      toast('The saloon', PIANO_LINES[(L.knock - 1) % PIANO_LINES.length], entryImg('ghosttown'));
+      setTimeout(() => tumbles.push({ x: L.x, y: L.y + 6, vx: rand(18, 30), z: 0, vz: 30, rot: 0 }), 900);
+      for (let i = 0; i < 6; i++) setTimeout(() => part(L.x + rand(-8, 8), L.y - 14, rand(-8, 8), rand(-18, -8), 1.4, '#fff2a8', 'note'), 600 + i * 140);
+      break;
+    }
+    case 'Listen': {
+      setState('graze'); H.stT = 1; sfx.whale();
+      for (let i = 0; i < 3; i++) setTimeout(() => spawnGhostAt(L.x + rand(-40, 40), L.y + rand(-30, 20), true), 400 + i * 700);
+      if (!L.heard) { L.heard = 1; setTimeout(() => card('Whale bones', 'Put your ear to the sand. Somewhere down there, it is still singing.', '', 7), 1300); }
+      break;
+    }
+    case 'Peek':
+      setState('paw'); sfx.paper();
+      if (!S.found.harmonica) setTimeout(() => { itemPop(L.x, L.y, SPR.harmonica); discover('harmonica'); sfx.harmonica(); }, 500);
+      else { toast('Inside the wagon', pick(WAGON_LINES), entryImg('wagon')); if (R() < .5) setTimeout(() => sfx.harmonica(), 400); }
+      break;
+    case 'Ding':
+      sfx.ding(); setState('paw');
+      if (!S.found.ticket) setTimeout(() => { itemPop(L.x + 28, L.y + 6, SPR.ticket); discover('ticket'); }, 600);
+      else toast('Ding!', pick(['Nobody comes. The bell is happy anyway.', 'A tumbleweed rolls by, like a customer.', 'Somewhere far off, a train whistles back.']), entryImg('station'));
+      break;
+    case 'Open': openLetter(L); break;
+    case 'Look': setState('graze'); H.stT = 1.5; showLetter('Rock drawings', 'A spiral, a fish, two hands, a sun, and a horse. Someone was here long before you. The horse looks a lot like yours.', '', SPR.glyphBig); break;
+    case 'Sniff': setState('graze'); H.stT = 1.6; sfx.snort(); setTimeout(() => hint('The bones smell like very old rain.', 4), 600); break;
+    case 'Ring': {
+      sfx.bell(); setState('paw');
+      for (let i = 0; i < 8; i++) part(L.x + rand(-6, 6), L.y - 20, rand(-16, 16), rand(-26, -10), 1.6, '#fff2a8', 'note');
+      for (const c of critters) if (dist(c.x, c.y, L.x, L.y) < 220) { if (c.type === 'flock') burstFlock(c); if (c.type === 'quail') c.flee = 1.5; if (c.type === 'raven') c.vy -= 30; }
+      const fl = { type: 'flock', x: L.x, y: L.y - 2, t: 0, burst: 0, birds: [] }; for (let k = 0; k < 7; k++) fl.birds.push({ x: L.x + rand(-10, 10), y: L.y + rand(-4, 4), z: rand(14, 22), vx: 0, vy: 0, vz: 0, ph: R() * 9, peck: 0 }); critters.push(fl); setTimeout(() => burstFlock(fl), 60);
+      break;
+    }
+  }
+  save();
+}
+function spawnGhostAt(x, y, day) { const dir = R() < .5 ? 1 : -1, n = 3 + (R() * 3 | 0), school = []; for (let k = 0; k < n; k++) school.push({ ox: rand(-12, 12), oy: rand(-7, 7), ph: R() * TAU }); ghosts.push({ type: R() < .2 ? 'jelly' : 'fish', x, y, vx: dir * 14, vy: rand(-2, 2), t: 0, life: 9, school, dir, day }); }
+function drawLMFlat(L, cx, cy, tt) {
+  const b = bctx, x = Math.floor(L.x - cx), y = Math.floor(L.y - cy);
+  if (x < -130 || x > LW + 130 || y < -90 || y > LH + 90) return;
+  switch (L.type) {
+    case 'windmill': { const tx = Math.floor(L.trough.x - cx), ty = Math.floor(L.trough.y - cy); b.fillStyle = 'rgba(120,80,50,.25)'; ellipseFill(b, tx, ty + 4, 14, 3); b.fillStyle = '#6a4630'; b.fillRect(tx - 10, ty - 2, 20, 5); b.fillStyle = '#4fa6d8'; b.fillRect(tx - 8, ty - 1, 16, 2); b.fillStyle = '#a6e0f5'; b.fillRect(tx - 7 + ((tt * 3 | 0) % 12), ty - 1, 2, 1); b.fillStyle = '#8a5e3e'; b.fillRect(tx - 10, ty - 2, 20, 1); break; }
+    case 'ghosttown': { b.fillStyle = '#8a6040'; b.fillRect(x - 78, y + 1, 156, 6); b.fillStyle = '#a87a52'; for (let k = -78; k < 78; k += 4) b.fillRect(x + k, y + 1, 3, 6); b.fillStyle = '#6a4630'; b.fillRect(x - 78, y + 7, 156, 1); break; }
+    case 'whale': { b.fillStyle = 'rgba(90,60,40,.16)'; ellipseFill(b, x, y + 1, 54, 9); for (let k = -36; k <= 42; k += 4) { const yy = y - 1 + Math.round(Math.sin(k / 18)); b.fillStyle = '#e6dcc4'; b.fillRect(x + k, yy, 3, 2); b.fillStyle = '#b8a888'; b.fillRect(x + k, yy + 2, 3, 1); } break; }
+    case 'station': { b.fillStyle = '#b8b0a4'; b.fillRect(x - 14, y + 1, 58, 12); b.fillStyle = '#a49c90'; for (let k = 0; k < 58; k += 10) b.fillRect(x - 14 + k, y + 1, 1, 12); b.fillStyle = '#cfc8bc'; b.fillRect(x - 14, y + 1, 58, 1); break; }
+    case 'dinobones': {
+      const bo = '#e6dcc4', sh = '#b8a888'; b.fillStyle = 'rgba(90,60,40,.14)'; ellipseFill(b, x - 6, y + 2, 46, 10);
+      for (let k = 0; k <= 60; k++) { const t = k / 60, px = x + 30 - t * 74, py = y + Math.sin(t * 5) * 4 * (1 - t * .4); b.fillStyle = k % 3 ? bo : sh; b.fillRect(Math.floor(px), Math.floor(py), 2, 2); }
+      b.fillStyle = bo; for (let k = 0; k < 7; k++) { const px = x - 4 - k * 4; b.fillRect(px, y - 6, 1, 5); b.fillRect(px, y + 3, 1, 5); }
+      b.fillRect(x - 10, y + 6, 1, 8); b.fillRect(x - 24, y + 6, 1, 8); b.fillRect(x - 10, y - 12, 1, 7); b.fillRect(x - 24, y - 12, 1, 7); break;
+    }
+    case 'wagon': { b.fillStyle = 'rgba(90,50,30,.16)'; ellipseFill(b, x, y + 1, 22, 4); break; }
+    case 'bell': { b.fillStyle = 'rgba(90,50,30,.16)'; ellipseFill(b, x, y + 1, 14, 3); break; }
+  }
+}
+function pxLine(b, x0, y0, x1, y1) { x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1); const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1; let e = dx + dy; for (let i = 0; i < 64; i++) { b.fillRect(x0, y0, 1, 1); if (x0 === x1 && y0 === y1) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x0 += sx; } if (e2 <= dx) { e += dx; y0 += sy; } } }
+function drawBlades(hx, hy) {
+  const b = bctx, ang = T * (.6 + W.wind * .7);
+  b.fillStyle = '#b8b0a0'; pxLine(b, hx, hy, hx + 11, hy - 1); b.fillRect(hx + 10, hy - 3, 3, 5);
+  for (let k = 0; k < 10; k++) { const a = ang + k / 10 * TAU; b.fillStyle = k & 1 ? '#d8d0c0' : '#a8a090'; pxLine(b, hx + Math.cos(a) * 3, hy + Math.sin(a) * 3, hx + Math.cos(a) * 10, hy + Math.sin(a) * 10); }
+  b.fillStyle = '#4a3a30'; b.fillRect(hx - 1, hy - 1, 3, 3);
+}
+
 /* ============================== journal UI ============================== */
 let jTab = 'plants', jSel = null;
-const TABS = [['plants', 'Plants'], ['birds', 'Birds'], ['rocks', 'Rocks'], ['things', 'Things'], ['stones', 'Stones']];
+const TABS = [['plants', 'Plants'], ['birds', 'Birds'], ['creatures', 'Creatures'], ['rocks', 'Rocks'], ['things', 'Things'], ['places', 'Places'], ['letters', 'Letters'], ['stones', 'Stones']];
 function openJournal() {
   audioInit(); $('journal').classList.remove('hide'); renderJournal();
 }
@@ -1310,7 +2213,7 @@ function closeJournal() { $('journal').classList.add('hide'); }
 function renderJournal() {
   $('jTitle').textContent = S.name ? S.name + "'s journal" : 'Journal';
   const tabs = $('jtabs'); tabs.innerHTML = '';
-  for (const [k, l] of TABS) { const bt = document.createElement('button'); bt.textContent = l + (k === 'stones' ? ' ' + RINGS.filter(r => r.found).length + '/9' : ' ' + ENTRIES.filter(e => e[0] === k && S.found[e[1]]).length + '/' + ENTRIES.filter(e => e[0] === k).length); bt.className = k === jTab ? 'on' : ''; bt.onclick = () => { jTab = k; jSel = null; renderJournal(); }; tabs.appendChild(bt); }
+  for (const [k, l] of TABS) { const bt = document.createElement('button'); bt.textContent = l + (k === 'stones' ? ' ' + RINGS.filter(r => r.found).length + '/9' : k === 'letters' ? ' ' + S.letters + '/' + LETTERS.length : ' ' + ENTRIES.filter(e => e[0] === k && S.found[e[1]]).length + '/' + ENTRIES.filter(e => e[0] === k).length); bt.className = k === jTab ? 'on' : ''; bt.onclick = () => { jTab = k; jSel = null; renderJournal(); }; tabs.appendChild(bt); }
   const body = $('jbody'); body.innerHTML = '';
   if (jTab === 'stones') {
     const m = document.createElement('div'); m.className = 'mem';
@@ -1318,6 +2221,11 @@ function renderJournal() {
     body.appendChild(m);
     $('jHint').textContent = S.name ? 'Every stone found. The river runs again.' : 'Nine stones hum in the desert. They remember something.';
     return;
+  }
+  if (jTab === 'letters') {
+    const m = document.createElement('div'); m.className = 'mem';
+    for (let i = 0; i < LETTERS.length; i++) { const d = document.createElement('div'); if (i < S.letters) { d.className = 'let'; d.innerHTML = '<i>LETTER ' + (i + 1) + '</i>'; d.appendChild(document.createTextNode(LETTERS[i] + ' — M.')); } else { d.className = 'no'; d.innerHTML = '<i>LETTER ' + (i + 1) + '</i>Still waiting in a mailbox somewhere. Look for a little red flag.'; } m.appendChild(d); }
+    body.appendChild(m); $('jHint').textContent = 'Letters from someone called M., left in lonely mailboxes.'; return;
   }
   const grid = document.createElement('div'); grid.className = 'grid';
   for (const e of ENTRIES.filter(x => x[0] === jTab)) {
@@ -1332,24 +2240,29 @@ function renderJournal() {
   if (jSel) { const e = ENT[jSel]; if (S.found[jSel]) { det.innerHTML = '<b></b><span></span>'; det.querySelector('b').textContent = e.name; det.querySelector('span').textContent = e.text; } else { det.innerHTML = '<b>Not found yet</b><span></span>'; det.querySelector('span').textContent = 'Hint: ' + e.hint; } }
   else det.textContent = 'Tap an entry to read about it.';
   body.appendChild(det);
-  $('jHint').textContent = 'Plants, birds, rocks and things you have met out here.';
+  $('jHint').textContent = jTab === 'places' ? Object.keys(S.regions).length + ' places wandered · ' + ((S.dist || 0) / 1000).toFixed(1) + ' km · ' + (S.races || 0) + ' train races · ' + (S.wishes || 0) + ' wishes' : 'Everything you have met out here.';
 }
 
 /* ============================== input ============================== */
 const DIRK = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD']);
+const OVERLAYS = ['journal', 'mapDlg', 'letter', 'photo'];
+const anyOverlay = () => OVERLAYS.some(id => !$(id).classList.contains('hide'));
+function closeAll() { closeJournal(); closeMap(); closeLetter(); $('photo').classList.add('hide'); }
 addEventListener('keydown', e => {
-  if ($('nameDlg').classList.contains('hide') === false) { if (e.code === 'Enter') confirmName(); return; }
+  if (!$('nameDlg').classList.contains('hide')) { if (e.code === 'Enter') confirmName(); return; }
   if (DIRK.has(e.code) || e.code === 'Space') e.preventDefault();
   if (mode === 'title') { if (!e.repeat && (e.code === 'Space' || e.code === 'Enter' || DIRK.has(e.code))) begin(); return; }
-  if (e.code === 'Escape' || (e.code === 'KeyJ' && !e.repeat)) { if (!$('journal').classList.contains('hide')) { closeJournal(); return; } if (e.code === 'KeyJ') { openJournal(); return; } }
-  if (!$('journal').classList.contains('hide')) return;
+  if (e.code === 'Escape') { closeAll(); return; }
+  if (!e.repeat && e.code === 'KeyJ') { if (!$('journal').classList.contains('hide')) closeJournal(); else { closeAll(); openJournal(); } return; }
+  if (!e.repeat && e.code === 'KeyM') { if (!$('mapDlg').classList.contains('hide')) closeMap(); else { closeAll(); openMap(); } return; }
+  if (anyOverlay()) { if (!e.repeat && (e.code === 'Space' || e.code === 'Enter') && !$('letter').classList.contains('hide')) closeLetter(); return; }
   audioInit();
   if (DIRK.has(e.code)) { input.keys.add(e.code); H.target = null; }
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') input.run = true;
   if (e.repeat) return;
-  if (e.code === 'Space' || e.code === 'KeyE' || e.code === 'Enter') action();
+  if (e.code === 'Space' || e.code === 'KeyE' || e.code === 'Enter') { if (!makeWish()) action(); }
   if (e.code === 'KeyH' || e.code === 'KeyQ') whinny();
-  if (e.code === 'KeyM') setMute(!muted);
+  if (e.code === 'KeyP') postcard();
 });
 addEventListener('keyup', e => { input.keys.delete(e.code); if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') input.run = false; });
 addEventListener('blur', () => { input.keys.clear(); input.run = false; input.x = input.y = 0; $('stick').classList.add('hide'); ptr = null; });
@@ -1373,7 +2286,8 @@ function ptrEnd(e) {
     const r = canvas.getBoundingClientRect(); const dpr = CW / r.width;
     const lx = ((e.clientX - r.left) * dpr - OX) / SC, ly = ((e.clientY - r.top) * dpr - OY) / SC;
     const wx = cam.x + lx, wy = cam.y + ly;
-    if (dist(wx, wy, H.x, H.y - 12) < 14) whinny();
+    if (makeWish()) {}
+    else if (dist(wx, wy, H.x, H.y - 12) < 14) whinny();
     else { H.target = { x: wx, y: wy }; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; part(wx + Math.cos(a) * 3, wy + Math.sin(a) * 2, Math.cos(a) * 10, Math.sin(a) * 6, .5, '#fff6e0'); } }
   }
   ptr = null; input.x = input.y = 0; $('stick').classList.add('hide'); $('knob').style.transform = '';
@@ -1390,6 +2304,25 @@ $('jClose').addEventListener('click', closeJournal);
 $('journal').addEventListener('click', e => { if (e.target === $('journal')) closeJournal(); });
 $('muteBtn').addEventListener('click', () => { audioInit(); setMute(!muted); });
 $('nameOk').addEventListener('click', confirmName);
+$('mapBtn').addEventListener('click', () => { closeAll(); openMap(); });
+$('camBtn').addEventListener('click', postcard);
+$('mapClose').addEventListener('click', closeMap);
+$('mapDlg').addEventListener('click', e => { if (e.target === $('mapDlg')) closeMap(); });
+$('zIn').addEventListener('click', () => { mapZ = Math.min(10, mapZ + 2); drawMap(); });
+$('zOut').addEventListener('click', () => { mapZ = Math.max(2, mapZ - 2); drawMap(); });
+$('zHome').addEventListener('click', () => { mapPan.x = mapPan.y = 0; drawMap(); });
+$('mapC').addEventListener('pointerdown', e => { mapDrag = { x: e.clientX, y: e.clientY, px: mapPan.x, py: mapPan.y }; try { $('mapC').setPointerCapture(e.pointerId); } catch (er) {} });
+$('mapC').addEventListener('pointermove', e => { if (!mapDrag) return; const k = MC / (mapZ * Math.min(window.devicePixelRatio || 1, 2)) * Math.min(window.devicePixelRatio || 1, 2); mapPan.x = mapDrag.px - (e.clientX - mapDrag.x) * k / 1; mapPan.y = mapDrag.py - (e.clientY - mapDrag.y) * k / 1; drawMap(); });
+$('mapC').addEventListener('pointerup', () => { mapDrag = null; }); $('mapC').addEventListener('pointercancel', () => { mapDrag = null; });
+$('mapC').addEventListener('wheel', e => { e.preventDefault(); mapZ = clamp(mapZ + (e.deltaY < 0 ? 1 : -1), 2, 10); drawMap(); }, { passive: false });
+$('lOk').addEventListener('click', closeLetter);
+$('letter').addEventListener('click', e => { if (e.target === $('letter')) closeLetter(); });
+$('pClose').addEventListener('click', () => $('photo').classList.add('hide'));
+$('pSave').addEventListener('click', savePostcard);
+$('pShare').addEventListener('click', sharePostcard);
+if (!navigator.share) $('pShare').style.display = 'none';
+addEventListener('visibilitychange', () => { if (document.hidden && mode === 'play') save(); });
+addEventListener('pagehide', () => { if (mode === 'play') save(); });
 let resetArm = 0;
 $('resetBtn').addEventListener('click', () => {
   const bt = $('resetBtn');
@@ -1402,12 +2335,13 @@ $('title').addEventListener('pointerdown', e => { if (e.target.tagName !== 'BUTT
 function begin() {
   if (mode !== 'title') return;
   audioInit(); mode = 'play';
-  $('title').classList.add('hide'); ['hud', 'topR', 'btmR'].forEach(id => $(id).classList.remove('hide'));
+  $('title').classList.add('hide'); ['hud', 'topR', 'btmR', 'btmL'].forEach(id => $(id).classList.remove('hide'));
+  S.curRegion = regionAt(H.x, H.y).key; S.regions[S.curRegion] = 1; H.biome = biomeAt(H.x, H.y); markSeen();
   updateHUD();
   const first = S.played < 2;
   if (first) {
     setTimeout(() => card('Day 1', 'No map and no hurry. Just you, the sand, and a horse who does not have a name yet.', '', 7), 500);
-    setTimeout(() => hint(isTouch ? 'Drag anywhere to wander, or tap a spot to walk there. Keep going to speed up. Tap the horse to say hello.' : 'Arrow keys or WASD to wander. Keep holding to speed up. Space to rest or drink, H to whinny, J for the journal.', 9), 8200);
+    setTimeout(() => hint(isTouch ? 'Drag anywhere to wander, or tap a spot to walk there. Keep going to speed up. Tap the horse to say hello.' : 'Arrow keys or WASD to wander. Keep holding to speed up. Space to interact, H to whinny, J journal, M map, P postcard.', 9), 8200);
   } else card('Welcome back', S.name ? S.name + ' is glad to see you.' : 'The horse is glad to see you.', '', 4);
   W.nextRain = S.rainSeen ? rand(200, 360) : 9999;
 }
@@ -1428,6 +2362,6 @@ if (had) { $('beginBtn').textContent = 'Continue'; $('titleNote').textContent = 
 cam.x = H.x - LW / 2; cam.y = H.y - LH / 2 - LH * titleOff();
 setMute(muted); updateHUD();
 if (new URLSearchParams(location.search).has('og')) { $('titleNote').style.display = 'none'; $('beginBtn').parentElement.style.display = 'none'; S.hour = +new URLSearchParams(location.search).get('og') || 17.6; }
-window.__hw = { camps: (x, y, r) => campsNear(x, y, r), SPR, H, S, RINGS, input, update, render, begin, action, whinny, activateRing, critters, W, get mode() { return mode; }, get cine() { return cine; }, confirmName, discover, spawnGhost, set hour(v) { S.hour = v; } };
+window.__hw = { get herd() { return herd; }, train, lms: (x, y, r) => lmsNear(x, y, r), regionAt, biomeAt, postcard, openMap, drawMap, makeWish, setStar: v => { star = v; }, devils, spawnHerd, seen, camps: (x, y, r) => campsNear(x, y, r), SPR, H, S, RINGS, input, update, render, begin, action, whinny, activateRing, critters, W, get mode() { return mode; }, get cine() { return cine; }, confirmName, discover, spawnGhost, set hour(v) { S.hour = v; } };
 requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
 })();

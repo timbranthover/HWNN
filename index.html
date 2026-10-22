@@ -17,7 +17,7 @@
 <meta name="twitter:image" content="https://hwnn.vercel.app/og.png">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Pixelify+Sans:wght@400;500;600;700&display=swap">
 <style>
 :root{
   /* Layout: full-bleed pixel world; soft paper panels float over it like notes in a saddlebag. */
@@ -115,9 +115,10 @@ button:focus-visible{outline:3px solid var(--rose);outline-offset:2px}
 /* joystick & hint */
 #stick{position:fixed;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;box-shadow:inset 0 0 0 3px rgba(74,44,31,.35);background:rgba(255,244,226,.25);pointer-events:none}
 #knob{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:rgba(255,244,226,.8);box-shadow:0 0 0 3px rgba(74,44,31,.5)}
-#hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(170px + env(safe-area-inset-bottom,0px));font-size:15px;background:rgba(255,244,226,.88);padding:8px 14px;box-shadow:0 0 0 2px rgba(74,44,31,.4);text-align:center;width:max-content;max-width:88vw;line-height:1.4;pointer-events:none}
+#hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(186px + env(safe-area-inset-bottom,0px));font-size:15px;background:rgba(255,244,226,.88);padding:8px 14px;box-shadow:0 0 0 2px rgba(74,44,31,.4);text-align:center;width:max-content;max-width:88vw;line-height:1.4;pointer-events:none}
 @media (max-height:520px) and (orientation:landscape){
-  #hint{left:calc(14px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:none;max-width:min(46vw,420px);width:auto;text-align:left;font-size:14px}
+  #region{top:calc(10px + env(safe-area-inset-top,0px))}
+  #hint{left:calc(14px + env(safe-area-inset-left,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:none;max-width:min(46vw,420px);width:auto;text-align:left;font-size:14px}
   #card{top:calc(8px + env(safe-area-inset-top,0px));width:min(52vw,440px);padding:10px 14px 9px}
   #card .t{font-size:16px;margin-top:4px}
   #card .s{margin-top:4px}
@@ -125,7 +126,46 @@ button:focus-visible{outline:3px solid var(--rose);outline-offset:2px}
   #title{padding-top:12px!important;gap:8px}
   #title h1{font-size:clamp(28px,11vh,64px)}
 }
-@media (prefers-reduced-motion:reduce){.toast{animation:none}.fade{transition:none}}
+/* bottom-left buttons */
+#btmL{position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;gap:12px}
+#btmL .px{width:50px;height:50px;display:grid;place-items:center;background:var(--paper);padding:0}
+#btmL svg{width:26px;height:26px;shape-rendering:crispEdges}
+/* region sign */
+#region{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 74px);transform:translate(-50%,-24px);opacity:0;transition:transform .55s cubic-bezier(.2,1.3,.4,1),opacity .4s;pointer-events:none;background:#9a6a42;color:#fff4e2;padding:7px 18px 8px;box-shadow:0 0 0 3px var(--ink),0 5px 0 3px var(--ink),inset 0 0 0 2px #c08a5a;text-align:center;max-width:86vw;box-sizing:border-box}
+#region.show{transform:translate(-50%,0);opacity:1}
+#region small{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#ffd9a8}
+#region span{display:block;font-size:clamp(18px,3vmin,24px);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* map */
+#mapDlg{position:fixed;inset:0;display:grid;place-items:center;background:rgba(74,44,31,.35);padding:16px;box-sizing:border-box}
+#mbox{width:100%;max-width:780px;height:min(88vh,660px);display:flex;flex-direction:column;background:var(--paper);box-shadow:0 0 0 3px var(--ink),0 7px 0 3px var(--ink)}
+#mhead{display:flex;justify-content:space-between;align-items:center;padding:12px 14px 8px;gap:10px}
+#mhead h2{margin:0;font-size:22px;text-wrap:balance}
+#mhead small{display:block;font-size:13px;color:var(--ink2);margin-top:2px}
+#mwrap{position:relative;flex:1;min-height:0;margin:0 12px;box-shadow:inset 0 0 0 3px #b8946a;overflow:hidden}
+#mapC{width:100%;height:100%;display:block;image-rendering:pixelated;touch-action:none;cursor:grab}
+#mzoom{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:12px}
+#mzoom .ib{width:42px;justify-content:center;padding:0;font-size:20px}
+#mfoot{padding:8px 14px 12px;font-size:13px;color:var(--ink2)}
+/* letters */
+#letter{position:fixed;inset:0;display:grid;place-items:center;background:rgba(74,44,31,.3);padding:16px;box-sizing:border-box}
+#lbox{width:min(90vw,430px);background:#fffaf0;padding:22px 22px 18px;box-sizing:border-box;box-shadow:0 0 0 3px var(--ink),0 7px 0 3px var(--ink);background-image:repeating-linear-gradient(transparent 0 31px,rgba(120,150,190,.22) 31px 32px);transform:rotate(-1deg);text-align:center}
+#lK{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);text-align:left}
+#lImg{display:none;width:100%;image-rendering:pixelated;margin:12px 0 0;box-shadow:0 0 0 2px var(--ink2)}
+#lT{font-family:'Caveat',cursive;font-size:clamp(24px,4.6vmin,30px);line-height:1.25;margin:12px 0 6px;text-align:left;color:#2e3a5a;text-wrap:pretty}
+#lS{font-family:'Caveat',cursive;font-size:26px;text-align:right;color:#2e3a5a;min-height:1em}
+#lOk{margin-top:12px;font-size:17px;padding:8px 16px;background:var(--paper2)}
+.mem .let{font-family:'Caveat',cursive;font-size:22px;line-height:1.2;color:#2e3a5a;background:#fffaf0}
+.mem .let i{font-family:var(--font)}
+/* postcards */
+#photo{position:fixed;inset:0;display:grid;place-items:center;background:rgba(40,24,16,.55);padding:16px;box-sizing:border-box}
+#pbox{display:flex;flex-direction:column;align-items:center;gap:16px;max-width:100%}
+#pImg{max-width:min(92vw,900px);max-height:72vh;box-shadow:0 0 0 3px var(--ink),0 10px 26px rgba(0,0,0,.35);transform:rotate(1deg);background:#fff6e6}
+#pbox .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+#pbox .px{font-size:17px;padding:9px 18px;font-weight:600}
+#pShare{background:#cfe9ff}
+#flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .6s}
+#flash.on{opacity:.85;transition:none}
+@media (prefers-reduced-motion:reduce){.toast{animation:none}.fade{transition:none}#region{transition:opacity .3s}}
 </style>
 </head>
 <body>
@@ -145,7 +185,12 @@ button:focus-visible{outline:3px solid var(--rose);outline-offset:2px}
   <button class="px" id="actBtn">Rest</button>
 </div>
 
+<div id="btmL" class="fade hide">
+  <button class="px" id="mapBtn" aria-label="Open map"><svg viewBox="0 0 10 10"><path fill="#4a2c1f" d="M0 1h3v1h1v-1h2v1h1v-1h3v8h-3v-1h-1v1h-2v-1h-1v1h-3z"/><path fill="#9fd08a" d="M1 2h2v6h-2z"/><path fill="#f2c894" d="M3 2h1v1h2v-1h1v6h-1v-1h-2v1h-1z"/><path fill="#7fb6d9" d="M7 2h2v6h-2z"/><path fill="#e9845a" d="M5 4h1v1h-1z"/></svg></button>
+  <button class="px" id="camBtn" aria-label="Take a postcard"><svg viewBox="0 0 10 10"><path fill="#4a2c1f" d="M1 3h2v-1h4v1h2v6h-8z"/><path fill="#fff4e2" d="M4 4h2v1h1v2h-1v1h-2v-1h-1v-2h1z"/><path fill="#4a2c1f" d="M4 5h2v2h-2z"/><path fill="#e9845a" d="M7 4h1v1h-1z"/></svg></button>
+</div>
 <div id="toasts"></div>
+<div id="region" aria-live="polite"><small id="rgB"></small><span id="rgN"></span></div>
 <div id="card" class="fade hide" role="status"><div class="k" id="cardK"></div><div class="t" id="cardT"></div><div class="s" id="cardS"></div></div>
 <div id="dayCard" class="fade hide"></div>
 <div id="hint" class="fade hide"></div>
@@ -166,6 +211,23 @@ button:focus-visible{outline:3px solid var(--rose);outline-offset:2px}
     <div id="jfoot"><small id="jHint"></small><button class="px sm" id="resetBtn">Start over</button></div>
   </div>
 </div>
+
+<div id="mapDlg" class="fade hide" role="dialog" aria-label="Map">
+  <div id="mbox">
+    <div id="mhead"><div><h2 id="mapTitle">Map</h2><small id="mapInfo"></small></div><button class="px ib" id="mapClose">Close</button></div>
+    <div id="mwrap"><canvas id="mapC"></canvas><div id="mzoom"><button class="px ib" id="zIn" aria-label="Zoom in">+</button><button class="px ib" id="zOut" aria-label="Zoom out">-</button><button class="px ib" id="zHome" aria-label="Center on the horse">Me</button></div></div>
+    <div id="mfoot">The map only shows places you have been. Drag to look around.</div>
+  </div>
+</div>
+
+<div id="letter" class="fade hide" role="dialog" aria-label="Letter">
+  <div id="lbox"><div id="lK"></div><img id="lImg" alt="Old drawings carved into a boulder"><p id="lT"></p><div id="lS"></div><button class="px" id="lOk">Put it back</button></div>
+</div>
+
+<div id="photo" class="fade hide" role="dialog" aria-label="Postcard">
+  <div id="pbox"><img id="pImg" alt="A postcard from the desert"><div class="row"><button class="px" id="pShare">Share</button><button class="px" id="pSave">Save</button><button class="px" id="pClose">Close</button></div></div>
+</div>
+<div id="flash"></div>
 
 <div id="nameDlg" class="fade hide" role="dialog" aria-label="Name the horse">
   <div id="nbox">
